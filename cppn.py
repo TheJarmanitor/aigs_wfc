@@ -18,9 +18,9 @@ class CPPN:
             self.weight = weight
             self.enabled = enabled
     
-    # TODO: Implement locking, which will precalculate connection or create layers and until the node is locked
-    #       it will used a precalculated version (faster multiple evaluations)
-    #       mutating this should unlock the node and new locking/calcs should be done before evaluation of NN
+    # TODO: Implement locking, which will precalculate connection or create layers and while the node is locked,
+    #       it will used a precalculated version (faster multiple evaluations).
+    #       mutating this should unlock the node and new locking/calcs should be done before the next evaluation of NN
     class Node:
         '''
         Node in the CPPN.
@@ -60,14 +60,14 @@ class CPPN:
         self.output_nodes = [CPPN.Node(i+len(self.input_nodes), 0, lambda x: x) for i in range(output_dim)]
         self.nodes = self.input_nodes + self.output_nodes
 
-        #for now fully connect input to output
+        #for now, fully connected input to output will suffice
         rng = random.PRNGKey(seed)
         for input_node in self.input_nodes:
             for output_node in self.output_nodes:
                 rng, key = random.split(rng)
                 self.connections.append(CPPN.Connection(input_node.id, output_node.id, random.normal(key, ())))
         
-        
+
     def forward_pass(self, inputs: Array) -> Array:
         for node in self.nodes:
             node.pass_init(sum([1 for connection in self.connections if connection.output_node == node.id]))
@@ -76,7 +76,7 @@ class CPPN:
             input_node.set_value(value)
 
 
-        # TODO: Instead of this, a layer or sequence will be created and we will iterate over that
+        # TODO: Instead of this, a layers or sequence will be created and we will iterate over that
         connections_to_evaluate = [connection for connection in self.connections]
         i = 0
         while len(connections_to_evaluate) != 0:
@@ -115,3 +115,19 @@ if __name__ == "__main__":
     cppn.describe()
     print("----------")
     print(cppn.forward_pass(jnp.array([1, 2])))
+
+    # Output:
+    #   CPPN with 2 input nodes and 2 output nodes.
+    #   Hidden nodes: 1
+    #   Connections: 5
+    #   Connection from 0 to 3 with weight -0.19947023689746857
+    #   Connection from 1 to 2 with weight -2.298278331756592
+    #   Connection from 1 to 3 with weight 0.44459623098373413
+    #   Connection from 0 to 4 with weight -0.2493748515844345
+    #   Connection from 4 to 2 with weight 1.096184492111206
+    #   ----------
+    #   Node 3 is locked with value 0.6897222399711609 -> 0.6897222399711609
+    #   Node 4 is locked with value -0.3775901198387146 -> 0.0
+    #   Node 2 is locked with value -4.596556663513184 -> -4.596556663513184
+    #   [-4.5965567   0.68972224]
+    
