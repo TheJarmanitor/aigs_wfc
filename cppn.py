@@ -30,25 +30,26 @@ class CPPN:
             self.id = id
             self.bias = bias
             self.activation_fn = activation_fn
-        def pass_init(self, input_connections: int):
-            self.input_value = self.bias
-            self.input_connections = input_connections
-        def add_value(self, value: float):
-            self.input_value += value
-            self.input_connections -= 1
-            if(self.input_connections == 0):
-                print(f"Node {self.id} is locked with value {self.input_value} -> {self.activation_fn(self.input_value)}")
-            if(self.input_connections < 0):
-                raise ValueError("Too many input connections added.")
-        def set_value(self, value: float):
-            self.input_value = value
-            self.input_connections = 0
-        def locked(self) -> bool:
-            return self.input_connections == 0
-        def evaluate(self):
-            if self.input_connections != 0:
-                raise ValueError("Not all input connections have been added.")
-            return self.activation_fn(self.input_value)
+
+        def pass_init(self, input_connections: int, values: typing.List[float], awaited_connections: typing.List[int]):
+            values[self.id] = self.bias
+            awaited_connections[self.id] = input_connections
+            
+        def add_value(self, value: float, values: typing.List[float], awaited_connections: typing.List[int]):
+            values[self.id] += value
+            awaited_connections[self.id] -= 1
+            #if(awaited_connections[self.id] <= 0):
+            #    print(f"Node {self.id} is locked with value {values[self.id]} -> {self.activation_fn(values[self.id])}")
+
+        def set_value(self, value: float, values: typing.List[float], awaited_connections: typing.List[int]):
+            values[self.id] = value
+            awaited_connections[self.id] = 0
+
+        def locked(self, awaited_connections: typing.List[int]) -> bool:
+            return awaited_connections[self.id] == 0
+        
+        def evaluate(self,values: typing.List[float]) -> float:
+            return self.activation_fn(values[self.id])
     
     def __init__(self, input_dim: int, output_dim: int, seed: int = 42):
         self.input_dim = input_dim
@@ -66,14 +67,16 @@ class CPPN:
             for output_node in self.output_nodes:
                 rng, key = random.split(rng)
                 self.connections.append(CPPN.Connection(input_node.id, output_node.id, random.normal(key, ())))
-        
-
+    
     def forward_pass(self, inputs: Array) -> Array:
+        #initialize values and awaited_connections
+        values = [0 for _ in self.nodes]
+        awaited_connections = [0 for _ in self.nodes]
         for node in self.nodes:
-            node.pass_init(sum([1 for connection in self.connections if connection.output_node == node.id]))
+            node.pass_init(sum([1 for connection in self.connections if connection.output_node == node.id]), values, awaited_connections)
 
         for input_node, value in zip(self.input_nodes, inputs):
-            input_node.set_value(value)
+            input_node.set_value(value, values, awaited_connections)
 
 
         # TODO: Instead of this, a layers or sequence will be created and we will iterate over that
@@ -81,14 +84,14 @@ class CPPN:
         i = 0
         while len(connections_to_evaluate) != 0:
             connection = connections_to_evaluate[i]
-            if self.nodes[connection.input_node].locked():
-                self.nodes[connection.output_node].add_value(self.nodes[connection.input_node].evaluate() * connection.weight)
+            if self.nodes[connection.input_node].locked(awaited_connections):
+                self.nodes[connection.output_node].add_value(self.nodes[connection.input_node].evaluate(values) * connection.weight, values, awaited_connections)
                 connections_to_evaluate.remove(connection)
             else:
                 i += 1
                 if i >= len(connections_to_evaluate):
                     i = 0
-        return jnp.array([node.evaluate() for node in self.output_nodes])
+        return jnp.array([node.evaluate(values) for node in self.output_nodes])
 
 
     def add_node_on_connection(self, connection: Connection, activation_fn: typing.Callable[[float], float], key):
@@ -114,7 +117,8 @@ if __name__ == "__main__":
     cppn.add_node_on_connection(cppn.connections[0], nn.relu, random.PRNGKey(1))
     cppn.describe()
     print("----------")
-    print(cppn.forward_pass(jnp.array([1, 2])))
+    jitted_forward_pass = jit(cppn.forward_pass)
+    print(jitted_forward_pass(jnp.array([1, 2])))
 
     # Output:
     #   CPPN with 2 input nodes and 2 output nodes.
