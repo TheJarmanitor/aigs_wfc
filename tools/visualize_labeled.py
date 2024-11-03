@@ -19,7 +19,7 @@ def visualize_labeled(
         with_labels=False,
         edgecolors="k",
         arrowstyle="->",
-        arrowsize=3,
+        arrowsize=8,
         edge_color=(0.3, 0.3, 0.3),
         save_path="network.svg",
         save_dpi=800,
@@ -55,15 +55,20 @@ def visualize_labeled(
                 G.add_node(node, subset=node2layer[node], size=size[2], color=color[2])
             else:
                 G.add_node(node, subset=node2layer[node], size=size[1], color=color[1])
-            print(network["nodes_data"][node])
-            if activation_functions is not None and not isnan(network["nodes_data"][node][4]):
+            #print(network["nodes_data"][node])
+            if activation_functions is not None and not isnan(network["nodes_data"][node][4]) \
+                and node not in input_idx and node not in output_idx:
                 act_name = activation_functions_dict[int(network["nodes_data"][node][4])]
                 custom_labels[node] = f"{node}\n{act_name}"
             else:
                 custom_labels[node] =  f"{node}"
 
-        for conn in conns_list:
-            G.add_edge(conn[0], conn[1])
+        edge_widths = []
+        edge_colors = []
+        for conn in network["conns"].values():
+            G.add_edge(conn['in'], conn['out'], weight=conn['weight'].item())
+            edge_widths.append(max(abs(conn['weight'].item()), 0.2))
+            edge_colors.append("red" if conn['weight'].item() < 0 else "blue")
         pos = nx.multipartite_layout(G)
 
         def rotate_layout(pos, angle):
@@ -91,7 +96,8 @@ def visualize_labeled(
             edgecolors=edgecolors,
             arrowstyle=arrowstyle,
             arrowsize=arrowsize,
-            edge_color=edge_color,
+            edge_color=edge_colors,
+            width=edge_widths,
             labels=custom_labels,
             font_size=6,
             **kwargs,
