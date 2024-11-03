@@ -1,72 +1,56 @@
-# %%
-import jax.numpy as jnp
-import numpy
+# %% Libraries
+from matplotlib.image import _ImageBase
+from tensorneat.problem.func_fit import FuncFit
+from tensorneat.pipeline import Pipeline
+from tensorneat import algorithm, genome, common
+from PIL import Image
+from tools.image_hashing import hash_grid
+
+import os
 import matplotlib.pyplot as plt
-import cv2
-from collections import Counter
+import jax.numpy as jnp
+import numpy as np
+
+
+# %%
+class TileProperties(FuncFit):
+    def __init__(self, grid, tile_size, error_method="mse") -> None:
+        self.grid = grid
+        self.tile_size = tile_size
+        self.error_method = error_method
+        self.grid_information, self.proportion_values = self._prepare_data()
+
+    def _prepare_data(self):
+        hashed_grid = hash_grid(self.grid, tile_size=self.tile_size)
+        height, width, _ = self.grid.shape
+        unique_values, unique_counts = np.unique(hashed_grid, return_counts=True)
+        unique_proportions = unique_counts / (height * width)
+        grid_information = []
+
+        for y in range(height):
+            for x in range(width):
+                normalized_x = (2 * x / (width - 1)) - 1  # Normalize x coordinate
+                normalized_y = (2 * y / (height - 1)) - 1  # Normalize y coordinate
+                coordinates = np.array([normalized_x, normalized_y])
+                one_hot = np.eye(len(unique_values))[int(hashed_grid[x, y])]
+
+                tile_information = np.concatenate((coordinates, one_hot))
+                grid_information.append(tile_information)
+
+        return np.array(grid_information), unique_proportions
+
 
 # %%
 
-test_grid = cv2.imread("test_grid.png")
-test_grid = cv2.cvtColor(test_grid, cv2.COLOR_BGR2RGB)
-test_grid = cv2.resize(test_grid, (576, 576))
+test_grid = np.array(Image.open("images/piskel_example1.png.png"))[..., :3]
+tile_grid = hash_grid(test_grid, tile_size=1)
+# unique_values, unique_counts = np.unique(tile_grid, return_counts=True)
+# unique_counts/144
+# grid_information
+tile_properties = TileProperties(test_grid, tile_size=1)
+tile_properties._prepare_data()
+
+# %%
+
+# %%
 plt.imshow(test_grid)
-# %%
-print(test_grid.shape)
-
-
-# %%
-def get_tiles(image, tile_size):
-    H, W, _ = image.shape
-
-    tiles = [
-        image[x : x + tile_size, y : y + tile_size, :]
-        for x in range(0, W, tile_size)
-        for y in range(0, H, tile_size)
-    ]
-    return tiles
-
-
-def get_hash_tiles(tiles):
-    def pHash(cv_image):
-        imgg = cv2.cvtColor(cv_image, cv2.COLOR_BGR2RGB)
-        h = cv2.img_hash.pHash(imgg)  # 8-byte hash
-        pH = int.from_bytes(h.tobytes(), byteorder="big", signed=False)
-        return pH
-
-    hashed_tiles = [pHash(tile) for tile in tiles]
-    return hashed_tiles
-
-
-def get_unique_tile_hashes(tiles):
-    hashed_tiles = get_hash_tiles(tiles)
-
-    return list(dict.fromkeys(hashed_tiles))
-
-
-def get_id_tile_dict(tiles):
-    unique_hashes = get_unique_tile_hashes(tiles)
-
-    hash_int_dict = dict([(unique_hashes[i], i) for i in range(len(unique_hashes))])
-
-    hash_tile_dict = dict(zip(get_hash_tiles(tiles), tiles))
-
-    int_tile_dict = dict([(hash_int_dict[i], hash_tile_dict[i]) for i in unique_hashes])
-
-    return int_tile_dict
-
-
-def get_id_list(tiles):
-    hashed_tiles = get_hash_tiles(tiles)
-    unique_hashes = get_unique_tile_hashes(tiles)
-
-    hash_int_dict = dict([(unique_hashes[i], i) for i in range(len(unique_hashes))])
-
-    int_tiles = [hash_int_dict[hash] for hash in hashed_tiles]
-
-    return int_tiles
-
-
-# %%
-tiles = get_tiles(test_grid, 576)
-plt.imshow(tiles[1])
