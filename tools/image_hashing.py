@@ -9,7 +9,7 @@ def get_hash(tile):
     return hash
 
 
-def hash_grid(grid, tile_size, return_label=True):
+def hash_grid(grid, tile_size):
     W, H, _ = grid.shape
     hashed_grid = np.zeros((H // tile_size, W // tile_size))
     for i in range(hashed_grid.shape[0]):
@@ -20,13 +20,21 @@ def hash_grid(grid, tile_size, return_label=True):
                     j * tile_size : tile_size * (j + 1),
                 ]
             )
-    if return_label:
-        label_grid = hashed_grid.copy()
-        unique_hashes = np.unique(hashed_grid)
-        unique_dict = dict(zip(unique_hashes, list(range(len(unique_hashes)))))
-
-        for key, new_value in unique_dict.items():
-            label_grid[hashed_grid == key] = new_value
-        return label_grid
-
     return hashed_grid
+
+def label_grids(grids, return_unique_values=True):
+    if not isinstance(grids, list):
+        grids = [grids]
+    # label_grid = hashed_grid.copy()
+    master_list = np.concatenate([grid.flatten() for grid in grids])
+    unique_values = np.unique(master_list)
+    unique_dict = dict(zip(unique_values, list(range(len(unique_values)))))
+    label_grids = []
+    for grid in grids:
+        copy_grid = grid.copy()
+        for key, new_value in unique_dict.items():
+            copy_grid[grid == key] = new_value
+        label_grids.append(copy_grid)
+    if return_unique_values:
+        return label_grids, unique_values
+    return label_grids

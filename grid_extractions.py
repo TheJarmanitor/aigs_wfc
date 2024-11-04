@@ -4,7 +4,7 @@ from tensorneat.problem.func_fit import FuncFit
 from tensorneat.pipeline import Pipeline
 from tensorneat import algorithm, genome, common
 from PIL import Image
-from tools.image_hashing import hash_grid
+from tools.image_hashing import hash_grid, label_grids
 
 import os
 import matplotlib.pyplot as plt
@@ -14,43 +14,65 @@ import numpy as np
 
 # %%
 class TileProperties(FuncFit):
-    def __init__(self, grid, tile_size, error_method="mse") -> None:
-        self.grid = grid
+    def __init__(self, grids, tile_size, hash=True, error_method="mse") -> None:
+        self.grids = grids
         self.tile_size = tile_size
+        self.hash = hash
         self.error_method = error_method
-        self.grid_information, self.proportion_values = self._prepare_data()
+        self._prepare_data()
 
     def _prepare_data(self):
-        hashed_grid = hash_grid(self.grid, tile_size=self.tile_size)
-        height, width, _ = self.grid.shape
-        unique_values, unique_counts = np.unique(hashed_grid, return_counts=True)
-        unique_proportions = unique_counts / (height * width)
-        grid_information = []
+        grid_info_list = []
+        one_hot_list = []
+        if self.hash:
+            hashed_grids = [hash_grid(grid, tile_size=1) for grid in self.grids]
+        else:
+            hashed_grids = self.grids
+        labeled_grids, unique_values = label_grids(hashed_grids)
+        for grid in labeled_grids:
+            height, width = grid.shape
+            _, unique_counts = np.unique(grid, return_counts=True)
+            # unique_proportions = unique_counts / (height * width)
+            # proportion_list.append(unique_proportions)
+            grid_information = []
+            one_hot_output = []
 
-        for y in range(height):
-            for x in range(width):
-                normalized_x = (2 * x / (width - 1)) - 1  # Normalize x coordinate
-                normalized_y = (2 * y / (height - 1)) - 1  # Normalize y coordinate
-                coordinates = np.array([normalized_x, normalized_y])
-                one_hot = np.eye(len(unique_values))[int(hashed_grid[x, y])]
+            for y in range(height):
+                for x in range(width):
+                    normalized_x = (2 * x / (width - 1)) - 1  # Normalize x coordinate
+                    normalized_y = (2 * y / (height - 1)) - 1  # Normalize y coordinate
+                    coordinates = np.array([normalized_x, normalized_y])
+                    one_hot = np.eye(len(unique_values))[int(grid[x, y])]
 
-                tile_information = np.concatenate((coordinates, one_hot))
-                grid_information.append(tile_information)
+                    grid_information.append(coordinates)
+                    one_hot_output.append(one_hot)
+            grid_info_list.append(np.array(grid_information))
+            one_hot_list.append(np.array(one_hot_output))
 
-        return np.array(grid_information), unique_proportions
+        self.input_data = jnp.concatenate(grid_info_list, axis=0)
+        self.output_data = jnp.concatenate(one_hot_list, axis=0)
+    @property
+    def inputs(self):
+        return self.input_data
 
+    @property
+    def targets(self):
+        return self.output_data
+
+    @property
+    def input_shape(self):
+        return self.input_data.shape
+
+    @property
+    def output_shape(self):
+        return self.output_data.shape
 
 # %%
 
 test_grid = np.array(Image.open("images/piskel_example1.png.png"))[..., :3]
-tile_grid = hash_grid(test_grid, tile_size=1)
-# unique_values, unique_counts = np.unique(tile_grid, return_counts=True)
-# unique_counts/144
-# grid_information
-tile_properties = TileProperties(test_grid, tile_size=1)
-tile_properties._prepare_data()
+samples_dir = 'images'
+images = [np.array(Image.open(os.path.join(samples_dir, file)))[..., :3] for file in os.listdir(samples_dir)
+          if file.startswith(('piskel'))]
 
-# %%
-
-# %%
-plt.imshow(test_grid)
+tile_properties = TileProperties(images, tile_size=1)
+tile_properties.input_shape
