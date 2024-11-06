@@ -7,7 +7,7 @@ possible_activations = [common.ACT.sigmoid, common.ACT.tanh, common.ACT.relu]
 activation_labels = ["SGMD", "TANH", "RELU"]
 
 algorithmm = algorithm.NEAT(
-    pop_size=500,
+    pop_size=1500,
     species_size=10,
     survival_threshold=0.01,
     genome=genome.DefaultGenome(
@@ -26,9 +26,9 @@ problemm = problem.XOR3d()
 pipeline = Pipeline(
     algorithmm,
     problemm,
-    generation_limit=10,
+    generation_limit=100,
     fitness_target=-1e-6,
-    seed=2,
+    seed=21,
 )
 state = pipeline.setup()
 # run until termination

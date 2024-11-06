@@ -1,8 +1,9 @@
 import numpy as np
 import time
+import pickle
+from sys import argv
 
-
-def wfc(tiles, rules, width, height, fixed_tiles=None, weigths=None):
+def wfc(tiles, rules, width, height, fixed_tiles=[], weigths=None, path_to_output=None):
     '''
     Wave Function Collapse algorithm
     :param tiles: list of tile names
@@ -11,6 +12,7 @@ def wfc(tiles, rules, width, height, fixed_tiles=None, weigths=None):
     :param height: height of the grid
     :param fixed_tiles: list of fixed tiles, each tile is a tuple of (x, y, tile)
     :param weigths: list of weigths for each tile
+    :param path_to_output: path to save the output to (if None, output is printed)
     '''
 
     # 0 -> up, 1 -> right, 2 -> down, 3 -> left
@@ -141,6 +143,40 @@ def wfc(tiles, rules, width, height, fixed_tiles=None, weigths=None):
                         continue
                     unique_queue.add((nx,ny))
         return True
+    
+    def propagate_extra(xys, superposition, fixed):
+        '''
+        Propagate the contraints as a wave across the grid, BUT also checks for new possible tiles to add to superpositions
+        :param xys: list of x,y positions to check in the propagation
+        :return: False if tile with no possible tiles was found, True otherwise
+        '''
+        unique_queue = set()
+        for x,y in xys:
+            unique_queue.add((x,y))
+        while len(unique_queue) > 0:
+            (x,y) = unique_queue.pop()
+            change = False
+            for dx, dy in directions:
+                nx, ny = x + dx, y + dy
+                if nx < 0 or nx >= width or ny < 0 or ny >= height:
+                    continue
+                if fixed[ny][nx] != -1:
+                    continue
+                new_superpositions = set()
+                for tile in tiles:
+                    if is_valid_tile(nx, ny, tile, superposition):
+                        new_superpositions.add(tile)
+                if len(new_superpositions) == 0:
+                    return False
+                if new_superpositions != superposition[ny][nx]:
+                    superposition[ny][nx] = new_superpositions
+                    change = True
+            if change:
+                for nx, ny in directions:
+                    if nx < 0 or nx >= width or ny < 0 or ny >= height:
+                        continue
+                    unique_queue.add((nx,ny))
+        return True
 
     def is_valid_tile(x, y, tile, superposition):
         '''
@@ -158,6 +194,30 @@ def wfc(tiles, rules, width, height, fixed_tiles=None, weigths=None):
                 return False
         return True
     
+    def nuke(x, y, radius,treshold, superposition, fixed):
+        '''
+        Remove all possible tiles from a given position within a given radius
+        :param x: x position to nuke
+        :param y: y position to nuke
+        :param radius: radius to nuke
+        '''
+        #TODO: remember nukes on specific positions to increase nuke sizes in future and reach reset
+        print(f"Nuking {x},{y} with radius {radius}")
+        if radius >= treshold:
+            return False
+        nuked_tiles = []
+        for dx in range(-radius, radius+1):
+            for dy in range(-radius, radius+1):
+                nx, ny = x + dx, y + dy
+                if nx < 0 or nx >= width or ny < 0 or ny >= height:
+                    continue
+                superposition[ny][nx] = set(range(len(tiles)))
+                fixed[ny][nx] = -1
+                nuked_tiles.append((nx,ny))
+        if not propagate_extra(nuked_tiles,superposition,fixed):
+            return nuke(x, y, radius+1, treshold, superposition, fixed)
+        return True
+    
 
     def run(superposition, fixed):
         '''
@@ -171,11 +231,18 @@ def wfc(tiles, rules, width, height, fixed_tiles=None, weigths=None):
             if x == -1:
                 return True
             if not collapse(x, y, superposition, fixed):
-                return False
+                if not nuke(x, y, 2, 5, superposition, fixed):
+                    return False
     
     def print_tiles(fixed):
         for row in fixed[::-1]:
-            print("".join(tiles[cell] for cell in row))
+            print(" ".join(str(tiles[cell]) for cell in row))
+    
+    def save_to_file(fixed,path):
+        with open(path, "w") as f:
+            for row in fixed[::-1]:
+                f.write(" ".join(str(tiles[cell]) for cell in row) + "\n")
+
     
     while True:
         superposition = [[set(range(len(tiles))) for _ in range(width)] for _ in range(height)]
@@ -192,8 +259,13 @@ def wfc(tiles, rules, width, height, fixed_tiles=None, weigths=None):
             
         if run(superposition, fixed):
             break
-        print("Failed, retrying")
-    print_tiles(fixed)
+        #count percentage of fixed tiles
+        fixed_count = sum(1 for row in fixed for cell in row if cell != -1)
+        print(f"Failed ({100*fixed_count/(width*height):.3f}% collapsed), retrying")
+    if path_to_output is not None:
+        save_to_file(fixed,path_to_output)
+    else:
+        print_tiles(fixed)
 
 
 
@@ -251,8 +323,21 @@ if __name__ == "__main__":
     ]
 
     #time testing
-    size = 80
-    for rules in [rules_mountain, rules_islands_beaches]:
-        start = time.time()
-        wfc(["a", "b", "c"], rules, size, size, [(25,25,1)], [2,1,2])
-        print(f"Size {size} took {time.time()-start} seconds")
+    
+    path_folder = "test"
+    if len(argv) > 1:
+        path_folder = argv[1]
+
+    size = 64 if len(argv) < 3 else int(argv[2])
+    path_to_file=f"outputs/{path_folder}/rules.pkl"
+    rules = pickle.load(open(path_to_file, "rb"))
+
+    #print rules
+    for i, rule in enumerate(rules):
+        print(f"Tile {i}")
+        for j, r in enumerate(rule):
+            print(f"  {j}: {r}")
+
+    start = time.time()
+    wfc([*range(len(rules))], rules, size, size, path_to_output=f"outputs/{path_folder}/output.txt")
+    print(f"Size {size} took {time.time()-start} seconds")
