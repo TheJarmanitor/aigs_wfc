@@ -1,4 +1,4 @@
-# Created by https://www.toptal.com/developers/gitignore/api/python,jupyternotebooks,csharp,linux,windows,visualstudiocode
+    # Created by https://www.toptal.com/developers/gitignore/api/python,jupyternotebooks,csharp,linux,windows,visualstudiocode
 # Edit at https://www.toptal.com/developers/gitignore?templates=python,jupyternotebooks,csharp,linux,windows,visualstudiocode
 
 ### Csharp ###
@@ -629,3 +629,7 @@ $RECYCLE.BIN/
 *.lnk
 
 # End of https://www.toptal.com/developers/gitignore/api/python,jupyternotebooks,csharp,linux,windows,visualstudiocode
+
+# Frank folder
+untracked/
+outputs/

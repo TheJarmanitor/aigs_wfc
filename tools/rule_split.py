@@ -6,6 +6,7 @@ import numpy as np
 from PIL import Image
 from sys import argv
 import os
+import pickle
 
 # enum for directions
 class Direction:
@@ -79,7 +80,7 @@ class RuleSet:
         self.image_id[y // self.tile_size][x // self.tile_size] = self.id_counter
         self.id_counter += 1
     
-    def output_to_folder(self, name: str):
+    def output_to_folder_xml(self, name: str):
         # get /outputs/ folder
         output_dir = os.path.join(os.getcwd(), "outputs")
         if not os.path.exists(output_dir):
@@ -108,13 +109,36 @@ class RuleSet:
                         f.write(f"    <neighbor left=\"im{t.id} {i}\" right=\"im{r} {i}\"/>\n")
             f.write("  </neighbors>\n")
             f.write("</set>\n")
+    
+    def output_to_folder_rules(self, name: str):
+        # get /outputs/ folder
+        output_dir = os.path.join(os.getcwd(), "outputs")
+        if not os.path.exists(output_dir):
+            os.makedirs(output_dir)
+        # create folder for this rule set
+        tileset_dir = os.path.join(output_dir, name)
+        if not os.path.exists(tileset_dir):
+            os.makedirs(tileset_dir)
+        # save tiles as images
+        for t in self.tiles:
+            img = Image.new("RGB", (self.tile_size, self.tile_size))
+            img.putdata([(c.r, c.g, c.b) for c in t.tile])
+            img.save(os.path.join(tileset_dir, f"im{t.id}.png"))
+        
+        rules = []
+        for t in self.tiles:
+            rules.append([])
+            for i in range(4):
+                rules[-1].append(set(t.rules[(i+3)%4]))
+        pickle.dump(rules, open(os.path.join(tileset_dir, "rules.pkl"), "wb"))
+
 
         
 
 
 if __name__ == "__main__":
-    if(len(argv) < 3):
-        print("Usage: python rule_split.py <input_image> <tile_size>")
+    if(len(argv) < 4):
+        print("Usage: python rule_split.py <input_image> <tile_size> <otuput_name>")
         exit(1)
     img = Image.open(argv[1])
     img = img.convert("RGB")
@@ -130,7 +154,8 @@ if __name__ == "__main__":
         print(f"Tile {t.id}")
         for i, r in enumerate(t.rules):
             print(f"  {i}: {r}")
-    rules.output_to_folder("test")
+    name = argv[3]
+    rules.output_to_folder_rules(name)
 
         
         

@@ -13,7 +13,7 @@ import jax.numpy as jnp
 # List to store all loaded images
 samples_dir = 'images'
 images = [Image.open(os.path.join(samples_dir, file)) for file in os.listdir(samples_dir) 
-          if file.endswith(('.png'))]
+          if file.startswith(('piskel_'))]
 
 #%% Plot Images
 # Display all images in a grid
