@@ -3,6 +3,8 @@ import time
 import pickle
 from sys import argv
 
+
+
 def wfc(tiles, rules, width, height, fixed_tiles=[], weigths=None, path_to_output=None):
     '''
     Wave Function Collapse algorithm
@@ -19,6 +21,11 @@ def wfc(tiles, rules, width, height, fixed_tiles=[], weigths=None, path_to_outpu
     directions = [(0, 1), (1, 0), (0, -1), (-1, 0)]
     if weigths is None:
         weigths = [1 for _ in range(len(tiles))]
+    # count the number of times this position was CENTER of a nuke
+    nuke_count = [[0 for _ in range(width)] for _ in range(height)]
+    # count the number of times this position was nuked (even if not the source of nuke)
+    nuked_times = [[0 for _ in range(width)] for _ in range(height)]
+    nuke_treshold = 5
 
     def collapse_lowest_entropy_heuristic(superposition, fixed):
         '''
@@ -73,7 +80,7 @@ def wfc(tiles, rules, width, height, fixed_tiles=[], weigths=None, path_to_outpu
         return min_x, min_y
 
     
-    def choose_random_weighted_tile(tiles):
+    def choose_random_weighted_tile(tiles, weights = weigths):
         '''
         Choose a random tile from a list of tiles, with a probability based on the weigths
         :param tiles: list of tiles to choose from
@@ -194,16 +201,17 @@ def wfc(tiles, rules, width, height, fixed_tiles=[], weigths=None, path_to_outpu
                 return False
         return True
     
-    def nuke(x, y, radius,treshold, superposition, fixed):
+    def nuke(x, y, superposition, fixed):
         '''
         Remove all possible tiles from a given position within a given radius
         :param x: x position to nuke
         :param y: y position to nuke
         :param radius: radius to nuke
         '''
-        #TODO: remember nukes on specific positions to increase nuke sizes in future and reach reset
+        radius = nuke_count[y][x] + 1
+        nuke_count[y][x] = radius
         print(f"Nuking {x},{y} with radius {radius}")
-        if radius >= treshold:
+        if radius >= nuke_treshold:
             return False
         nuked_tiles = []
         for dx in range(-radius, radius+1):
@@ -214,8 +222,9 @@ def wfc(tiles, rules, width, height, fixed_tiles=[], weigths=None, path_to_outpu
                 superposition[ny][nx] = set(range(len(tiles)))
                 fixed[ny][nx] = -1
                 nuked_tiles.append((nx,ny))
+                nuked_times[ny][nx] += 1
         if not propagate_extra(nuked_tiles,superposition,fixed):
-            return nuke(x, y, radius+1, treshold, superposition, fixed)
+            return nuke(x, y, superposition, fixed)
         return True
     
 
@@ -231,7 +240,7 @@ def wfc(tiles, rules, width, height, fixed_tiles=[], weigths=None, path_to_outpu
             if x == -1:
                 return True
             if not collapse(x, y, superposition, fixed):
-                if not nuke(x, y, 2, 5, superposition, fixed):
+                if not nuke(x, y, superposition, fixed):
                     return False
     
     def print_tiles(fixed):
@@ -242,6 +251,9 @@ def wfc(tiles, rules, width, height, fixed_tiles=[], weigths=None, path_to_outpu
         with open(path, "w") as f:
             for row in fixed[::-1]:
                 f.write(" ".join(str(tiles[cell]) for cell in row) + "\n")
+        with open(path.replace(".txt","_nukelog.txt"), "w") as f:
+            for row in nuked_times[::-1]:
+                f.write(" ".join(str(cell) for cell in row) + "\n")
 
     
     while True:

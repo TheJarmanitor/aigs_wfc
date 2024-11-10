@@ -2,6 +2,8 @@ import numpy as np
 import sys
 import matplotlib.image as mpimg
 
+SHOW_NUKES = True
+
 path_folder = "test" if len(sys.argv) < 2 else sys.argv[1]
 input_file = "output.txt" if len(sys.argv) < 3 else sys.argv[2]
 output_file = "output.png" if len(sys.argv) < 4 else sys.argv[3]
@@ -20,6 +22,17 @@ output = [line.split(" ") for line in output if line != ""]
 width = len(output[0])
 height = len(output)
 print(width, height)
+
+if SHOW_NUKES:
+    # load nukes
+    img = np.zeros((height, width, 3), dtype=np.uint8)
+    nukes = np.zeros((height, width), dtype=np.uint8)
+    with open(f"outputs/{path_folder}/{output_file[:-4]}_nukelog.txt", "r") as f:
+        for y, line in enumerate(f):
+            for x, nuke in enumerate(line.split(" ")):
+                img[y, x] = np.array([255, 0, 0]) * int(nuke)/5.0
+                nukes[y, x] = int(nuke)
+    mpimg.imsave(f"outputs/{path_folder}/{output_file[:-4]}_nukelog.png", img)
 
 # load tiles
 tiles = []
@@ -44,5 +57,13 @@ img = np.zeros((height*tile_height, width*tile_width, 3), dtype=np.uint8)
 for y, line in enumerate(output):
     for x, tile_id in enumerate(line):
         img[y*tile_height:(y+1)*tile_height, x*tile_width:(x+1)*tile_width] = tiles[int(tile_id)]*255
+
+# add red overlay for nukes on the output image
+if SHOW_NUKES:
+    for x in range(width*tile_width):
+        for y in range(height*tile_height):
+            t = nukes[y//tile_height, x//tile_width]/5.0
+            t = 1 if t > 1 else t
+            img[y, x] = img[y, x] * (1-t) + np.array([255, 0, 0]) * t
 
 mpimg.imsave(f"outputs/{path_folder}/{output_file}", img)
