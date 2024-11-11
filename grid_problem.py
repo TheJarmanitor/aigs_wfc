@@ -12,6 +12,7 @@ import jax.numpy as jnp
 import numpy as np
 from jax import vmap
 
+from tools.visualize_labeled import visualize_labeled, network_dict
 
 # %%
 class TileProperties(FuncFit):
@@ -59,6 +60,8 @@ class TileProperties(FuncFit):
         predict = vmap(act_func, in_axes=(None, None, 0))(
                     state, params, self.inputs
                 )
+        predict = jnp.argmax(predict, axis=1)
+        predict = jnp.eye(len(self.unique_labels))[predict]
         predict_proportions = np.sum(predict, axis=0)/(predict.shape[0]*predict.shape[1])
         target_proportions = np.sum(self.targets, axis=0)/(self.output_shape[0]*self.output_shape[1])
 
@@ -122,6 +125,8 @@ pipeline = Pipeline(
     seed=42,  # Random seed for reproducibility
 )
 
+
+
 state = pipeline.setup()
 # Run the NEAT algorithm until termination
 state, best = pipeline.auto_run(state)
@@ -130,9 +135,26 @@ pipeline.show(state, best)
 # %%
 
 # %%
-network = algo.genome.network_dict(state, *best)
-algo.genome.visualize(network, save_path="images/tileproperties_network.png")
+#network = algo.genome.network_dict(state, *best)
+#algo.genome.visualize(network, save_path="images/tileproperties_network.png")
+
+
+network = network_dict(algo.genome, state, *best)
+visualize_labeled(algo.genome,network,["SGM"], rotate=90, save_path="network.svg", with_labels=True)
 # %%
-# algo.forward(state, algo.transform(state, best), problem.inputs)
+
+result = vmap(algo.forward,in_axes=(None,None,0))(state, algo.transform(state, best), problem.inputs)
 # %%
-best[0].shape
+print(result)
+result = np.argmax(result, axis=1)
+print(result)
+result = result.reshape(test_grid.shape[:2])
+print(result)
+
+# %% get ratio of elements
+unique, counts = np.unique(result, return_counts=True)
+print(unique, counts)
+print("----------")
+target = np.argmax(problem.output_data, axis=1)
+unique, counts = np.unique(target, return_counts=True)
+print(unique, counts)
