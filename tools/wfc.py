@@ -1,11 +1,11 @@
 import numpy as np
 import time
 import pickle
+import jax.numpy as jnp
 from sys import argv
+from jax import random
 
-
-
-def wfc(tiles, rules, width, height, fixed_tiles=[], weigths=None, path_to_output=None):
+def wfc(tiles, rules, width, height, fixed_tiles=[], weights=None, path_to_output=None, layout_map = None):
     '''
     Wave Function Collapse algorithm
     :param tiles: list of tile names
@@ -13,14 +13,13 @@ def wfc(tiles, rules, width, height, fixed_tiles=[], weigths=None, path_to_outpu
     :param width: width of the grid
     :param height: height of the grid
     :param fixed_tiles: list of fixed tiles, each tile is a tuple of (x, y, tile)
-    :param weigths: list of weigths for each tile
+    :param weights: list of weights for each tile
     :param path_to_output: path to save the output to (if None, output is printed)
     '''
-
     # 0 -> up, 1 -> right, 2 -> down, 3 -> left
     directions = [(0, 1), (1, 0), (0, -1), (-1, 0)]
-    if weigths is None:
-        weigths = [1 for _ in range(len(tiles))]
+    if weights is None:
+        weights = [1 for _ in range(len(tiles))]
     # count the number of times this position was CENTER of a nuke
     nuke_count = [[0 for _ in range(width)] for _ in range(height)]
     # count the number of times this position was nuked (even if not the source of nuke)
@@ -82,20 +81,38 @@ def wfc(tiles, rules, width, height, fixed_tiles=[], weigths=None, path_to_outpu
     
     def choose_random_weighted_tile(tiles, weights = weigths):
         '''
-        Choose a random tile from a list of tiles, with a probability based on the weigths
+        Choose a random tile from a list of tiles, with a probability based on the weights
         :param tiles: list of tiles to choose from
         '''
-        total = sum(weigths[tile] for tile in tiles)
+        total = sum(weights[tile] for tile in tiles)
         r = np.random.uniform(0, total)
         for tile in tiles:
-            r -= weigths[tile]
+            r -= weights[tile]
             if r <= 0:
                 return tile
         return tiles[-1]
 
+    def choose_local_weighted_tile(possible_tiles, local_weights, rng):
+        '''
+        Choose a tile based on the local weights/probabilities. 
+        A greater probability of tiles increases the chance of the specific tile being chosen.
+        '''
+        # Filter weights for only the eligible tiles, need to specify all tiles
+        rng, key = random.split(rng)
+        
+        #filtered_tiles = [tile for tile in all_tiles if tile in possible_tiles]
+        filtered_weights = [local_weights[tile] for tile in possible_tiles]
+        
+        weights_sum = sum(filtered_weights)
+        normalized_weight = [w / weights_sum for w in filtered_weights]
+    
+        return random.choice(key, jnp.array(possible_tiles), p=jnp.array(normalized_weight)).item(), rng
+    
+    def sample_layout(x,y) -> int:
+        return layout_map[y][x]
+        
 
-
-    def collapse(x, y, superposition, fixed):
+    def collapse(x, y, superposition, fixed, rng, local_weights: list = None):
         '''
         Try to collapse the superposition at a given position to a single tile
         :param x: x position to collapse
@@ -105,7 +122,11 @@ def wfc(tiles, rules, width, height, fixed_tiles=[], weigths=None, path_to_outpu
         #TODO add local weights
         possible_tiles  = list(superposition[y][x])
         while len(possible_tiles) > 0:
-            tile = choose_random_weighted_tile(possible_tiles)
+            if local_weights:
+                color = sample_layout(x, y)
+                tile, rng = choose_local_weighted_tile(possible_tiles, local_weights[color], rng) 
+            else:
+                tile = choose_random_weighted_tile(possible_tiles)
             superposition[y][x] = {tile}
             fixed[y][x] = tile
             if not propagate(x, y, superposition, fixed):
@@ -234,12 +255,14 @@ def wfc(tiles, rules, width, height, fixed_tiles=[], weigths=None, path_to_outpu
     
         :return: True if the algorithm was successful, False otherwise
         '''
+        rng = random.PRNGKey(0)
         while True:
             #x, y = collapse_manhattan_heuristic(superposition, fixed)
             x, y = collapse_lowest_entropy_heuristic(superposition, fixed)
             if x == -1:
                 return True
-            if not collapse(x, y, superposition, fixed):
+            rng, key = random.split(rng)
+            if not collapse(x, y, superposition, fixed, key, weights):
                 if not nuke(x, y, superposition, fixed):
                     return False
     
@@ -280,12 +303,30 @@ def wfc(tiles, rules, width, height, fixed_tiles=[], weigths=None, path_to_outpu
         print_tiles(fixed)
 
 
+def local_weight(bundle: list, prob_magnitude: float = 10.0, default_weight: float = 0.01) -> list:
+    # Initialize weight map with default values
+    weight_map = [[default_weight for _ in range(18)] for _ in range(4)]
+    
+    # Update weights for tiles in the bundle
+    for tile in range(18):
+        for input_color in range(4):
+            if tile in bundle[input_color]:
+                weight_map[input_color][tile] = prob_magnitude
+    
+    # Normalize each row in the weight map
+    weight_map_norm = []
+    for row in weight_map:
+        row_sum = sum(row)
+        normalized_row = [w / row_sum for w in row]
+        weight_map_norm.append(normalized_row)
+    
+    return weight_map_norm
 
 
 
 
 if __name__ == "__main__":
-
+                  
     rules_islands_beaches = [
         #a -> a,b
         [
@@ -349,7 +390,31 @@ if __name__ == "__main__":
         print(f"Tile {i}")
         for j, r in enumerate(rule):
             print(f"  {j}: {r}")
-
+            
+    layout_map = [[0 for _ in range(size)] for _ in range(size)]
+    
+    for x in range(size):
+        for y in range(size):
+            if x > y:
+                layout_map[y][x] = 1
+            if abs(x - y) < 2:
+                layout_map[y][x] = 2
+            if abs(size-x) < 10 and abs(size-y) < 10:
+                layout_map[y][x] = 3
+            
+    
+    #local weights definition (change this when application is up and running)
+    bundle=[
+        [8],
+        [1, 2, 3],
+        [6, 17],
+        [9]
+    ]
+    
+    local_weights = local_weight(bundle)
+    
     start = time.time()
-    wfc([*range(len(rules))], rules, size, size, path_to_output=f"outputs/{path_folder}/output.txt")
+    wfc([*range(len(rules))], rules, size, size, weights = local_weights, path_to_output=f"outputs/{path_folder}/output.txt", layout_map = layout_map)
     print(f"Size {size} took {time.time()-start} seconds")
+    
+    
