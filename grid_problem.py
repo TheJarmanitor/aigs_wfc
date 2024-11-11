@@ -16,7 +16,7 @@ from jax import vmap
 # %%
 class TileProperties(FuncFit):
     def __init__(self, grids, tile_size, hash=True, error_method="mse") -> None:
-        self.grids = grids
+        self.grids = grids if isinstance(grids, list) else [grids]
         self.tile_size = tile_size
         self.hash = hash
         self.error_method = error_method
@@ -100,3 +100,39 @@ test_grid = np.array(Image.open("images/piskel_example1.png.png"))[..., :3]
 samples_dir = 'images'
 images = [np.array(Image.open(os.path.join(samples_dir, file)))[..., :3] for file in os.listdir(samples_dir)
           if file.startswith(('piskel'))]
+
+algo = algorithm.NEAT(
+    pop_size=1000,  # Population size
+    species_size=20,  # Size of species
+    survival_threshold=0.1,  # Threshold for survival
+    genome=genome.DefaultGenome(
+        num_inputs=2,  # Normalized Pixel Coordinates and Number of input features (RGB values)
+        num_outputs=4,  # Number of output categories (Red, Brown, Green, Blue)
+        output_transform=common.ACT.sigmoid,  # Activation function for output layer
+    ),
+)
+
+problem = TileProperties(test_grid, tile_size=1)
+
+pipeline = Pipeline(
+    algorithm=algo,  # The configured NEAT algorithm
+    problem=problem,  # The problem instance
+    generation_limit=200,  # Maximum generations to run
+    fitness_target=-1e-6,  # Target fitness level
+    seed=42,  # Random seed for reproducibility
+)
+
+state = pipeline.setup()
+# Run the NEAT algorithm until termination
+state, best = pipeline.auto_run(state)
+# Display the results of the pipeline run
+pipeline.show(state, best)
+# %%
+
+# %%
+network = algo.genome.network_dict(state, *best)
+algo.genome.visualize(network, save_path="images/tileproperties_network.png")
+# %%
+# algo.forward(state, algo.transform(state, best), problem.inputs)
+# %%
+best[0].shape
