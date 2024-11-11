@@ -79,7 +79,7 @@ def wfc(tiles, rules, width, height, fixed_tiles=[], weights=None, path_to_outpu
         return min_x, min_y
 
     
-    def choose_random_weighted_tile(tiles, weights = weigths):
+    def choose_random_weighted_tile(tiles, weights = weights):
         '''
         Choose a random tile from a list of tiles, with a probability based on the weights
         :param tiles: list of tiles to choose from
