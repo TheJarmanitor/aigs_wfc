@@ -38,7 +38,7 @@ class TileProperties(FuncFit):
             # proportion_list.append(unique_proportions)
             grid_information = []
             one_hot_output = []
-
+            print(len(unique_labels))
             for y in range(height):
                 for x in range(width):
                     normalized_x = (2 * x / (width - 1)) - 1  # Normalize x coordinate
