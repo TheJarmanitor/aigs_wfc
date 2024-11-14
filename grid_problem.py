@@ -12,6 +12,7 @@ import jax.numpy as jnp
 import numpy as np
 from jax import vmap
 
+from tools.visualize_labeled import visualize_labeled, network_dict
 
 # %%
 class TileProperties(FuncFit):
@@ -60,6 +61,8 @@ class TileProperties(FuncFit):
         predict = vmap(act_func, in_axes=(None, None, 0))(
                     state, params, self.inputs
                 )
+        predict = jnp.argmax(predict, axis=1)
+        predict = jnp.eye(len(self.unique_labels))[predict]
         predict_proportions = np.sum(predict, axis=0)/(predict.shape[0]*predict.shape[1])
         target_proportions = np.sum(self.targets, axis=0)/(self.output_shape[0]*self.output_shape[1])
 
@@ -97,52 +100,54 @@ class TileProperties(FuncFit):
         return self.output_data.shape
 
 # %%
-test_grid = np.array(Image.open("images/dragon_warrior_map.png"))[..., :3]
-samples_dir = 'images'
-images = [np.array(Image.open(os.path.join(samples_dir, file)))[..., :3] for file in os.listdir(samples_dir)
-          if file.startswith(('piskel'))]
-hash_image, hash_dict = hash_grid(test_grid, tile_size=1, return_dict=True)
-_, unique_labels = label_grids(hash_image)
-len(hash_dict)
-# %%
-fig, axes = plt.subplots(nrows=6, ncols=6, dpi=150, figsize=(10,10))
-for tile, ax in zip(hash_dict.values(), axes.flatten()):
-    ax.imshow(tile)
 
+def cppn_neat(input_grid: np.array, pop_size: int = 1000, species_size: int = 20
+              , survival_threshold: float = 0.1, generation_limit: int = 200
+              , fitness_target: float = -1e-6, seed: int= 42, show_network: bool = False):
+    
+    algo = algorithm.NEAT(
+        pop_size=pop_size,  # Population size
+        species_size=species_size,  # Size of species
+        survival_threshold=survival_threshold,  # Threshold for survival
+        genome=genome.DefaultGenome(
+            num_inputs=2,  # Normalized Pixel Coordinates and Number of input features (RGB values)
+            num_outputs=4,  # Number of output categories (Red, Brown, Green, Blue)
+            output_transform=common.ACT.sigmoid,  # Activation function for output layer
+        ),
+    )
 
-# %%
-algo = algorithm.NEAT(
-    pop_size=1000,  # Population size
-    species_size=20,  # Size of species
-    survival_threshold=0.1,  # Threshold for survival
-    genome=genome.DefaultGenome(
-        num_inputs=2,  # Normalized Pixel Coordinates and Number of input features (RGB values)
-        num_outputs=4,  # Number of output categories (Red, Brown, Green, Blue)
-        output_transform=common.ACT.sigmoid,  # Activation function for output layer
-    ),
-)
+    problem = TileProperties(input_grid, tile_size=1)
 
-problem = TileProperties(test_grid, tile_size=1)
+    pipeline = Pipeline(
+        algorithm=algo,  # The configured NEAT algorithm
+        problem=problem,  # The problem instance
+        generation_limit=generation_limit,  # Maximum generations to run
+        fitness_target=fitness_target,  # Target fitness level
+        seed=seed,  # Random seed for reproducibility
+    )
 
-pipeline = Pipeline(
-    algorithm=algo,  # The configured NEAT algorithm
-    problem=problem,  # The problem instance
-    generation_limit=200,  # Maximum generations to run
-    fitness_target=-1e-6,  # Target fitness level
-    seed=42,  # Random seed for reproducibility
-)
+    
+    
+    state = pipeline.setup()
+    # Run the NEAT algorithm until termination
+    state, best = pipeline.auto_run(state)
+    # Display the results of the pipeline run
+    pipeline.show(state, best)
+    
+    if show_network:
+        network = network_dict(algo.genome, state, *best)
+        visualize_labeled(algo.genome,network,["SGM"], rotate=90, save_path="network.svg", with_labels=True)
 
-state = pipeline.setup()
-# Run the NEAT algorithm until termination
-state, best = pipeline.auto_run(state)
-# Display the results of the pipeline run
-pipeline.show(state, best)
-# %%
-
-# %%
-network = algo.genome.network_dict(state, *best)
-algo.genome.visualize(network, save_path="images/tileproperties_network.png")
-# %%
-# algo.forward(state, algo.transform(state, best), problem.inputs)
-# %%
-best[0].shape
+    algo_forward = vmap(algo.forward,in_axes=(None,None,0))(state, algo.transform(state, best), problem.inputs)
+    result = np.argmax(algo_forward, axis=1)
+    # print(result)
+    # result = result.reshape(test_grid.shape[:2])
+    # print(result)
+    
+    # unique, counts = np.unique(result, return_counts=True)
+    # print(unique, counts)
+    # print("----------")
+    # target = np.argmax(problem.output_data, axis=1)
+    # unique, counts = np.unique(target, return_counts=True)
+    # print(unique, counts)
+    return result
