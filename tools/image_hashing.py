@@ -11,7 +11,7 @@ def get_hash(tile):
 
 def hash_grid(grid, tile_size):
     W, H, _ = grid.shape
-    hashed_grid = np.zeros((H // tile_size, W // tile_size))
+    hashed_grid = np.zeros((W // tile_size, H // tile_size))
     for i in range(hashed_grid.shape[0]):
         for j in range(hashed_grid.shape[1]):
             hashed_grid[i, j] = get_hash(
