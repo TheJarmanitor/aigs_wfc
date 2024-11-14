@@ -55,6 +55,38 @@ class TileProperties(FuncFit):
         self.output_data = jnp.concatenate(one_hot_list, axis=0)
         self.unique_labels = unique_labels
 
+        self.width = width
+        self.height = height
+
+        self.target = self.extract_metrics(self.output_data, len(unique_labels))
+        print(jnp.argmax(self.output_data,axis=1).reshape(self.height, self.width))
+
+    def extract_metrics(self, image, colors):
+        if image.shape[1] == colors:
+            image = jnp.argmax(image, axis=1).reshape(self.height, self.width)
+        height, width = self.width, self.height
+        if colors is list:
+            colors = len(colors)
+
+        # tiles ratio
+        tiles_ratio = [0 for _ in range(colors)]
+        for i in range(colors):
+            tiles_ratio[i] = jnp.sum(image == i)
+        tiles_ratio = jnp.array(tiles_ratio) / (height * width)
+
+        # edge ratio
+        edge_ratio = [0 for _ in range(colors**2)]
+        for i in range(colors):
+            for j in range(colors):
+                index = min(i*colors+j,j*colors+i)
+                edge_ratio[index] += jnp.sum((image[:-1, :] == i) & (image[1:, :] == j))
+                edge_ratio[index] += jnp.sum((image[:, :-1] == i) & (image[:, 1:] == j))
+        edge_ratio = jnp.array(edge_ratio) / jnp.sum(jnp.array(edge_ratio))
+        return jnp.concatenate([tiles_ratio, edge_ratio])
+        
+
+
+
     def evaluate(self, state, randkey, act_func, params):
 
         predict = vmap(act_func, in_axes=(None, None, 0))(
@@ -62,20 +94,19 @@ class TileProperties(FuncFit):
                 )
         predict = jnp.argmax(predict, axis=1)
         predict = jnp.eye(len(self.unique_labels))[predict]
-        predict_proportions = np.sum(predict, axis=0)/(predict.shape[0]*predict.shape[1])
-        target_proportions = np.sum(self.targets, axis=0)/(self.output_shape[0]*self.output_shape[1])
+        predict_metrics = self.extract_metrics(predict, len(self.unique_labels))
 
         if self.error_method == "mse":
-                loss = jnp.mean((predict_proportions - target_proportions) ** 2)
+                loss = jnp.mean((predict_metrics - self.target) ** 2)
 
         elif self.error_method == "rmse":
-            loss = jnp.sqrt(jnp.mean((predict_proportions - target_proportions) ** 2))
+            loss = jnp.sqrt(jnp.mean((predict_metrics - self.target) ** 2))
 
         elif self.error_method == "mae":
-            loss = jnp.mean(jnp.abs(predict_proportions - target_proportions))
+            loss = jnp.mean(jnp.abs(predict_metrics - self.target))
 
         elif self.error_method == "mape":
-            loss = jnp.mean(jnp.abs((predict_proportions - target_proportions) / target_proportions))
+            loss = jnp.mean(jnp.abs((predict_metrics - self.target) / self.target))
 
         else:
             raise NotImplementedError
@@ -111,12 +142,14 @@ def cppn_neat(input_grid: np.array, pop_size: int = 1000, species_size: int = 20
         genome=genome.DefaultGenome(
             num_inputs=2,  # Normalized Pixel Coordinates and Number of input features (RGB values)
             num_outputs=4,  # Number of output categories (Red, Brown, Green, Blue)
-            output_transform=common.ACT.sigmoid,  # Activation function for output layer
+            #output_transform=common.ACT.sigmoid,  # Activation function for output layer
+            node_gene=genome.DefaultNode(
+                activation_options=[common.ACT.sigmoid, common.ACT.tanh],  # Activation functions for hidden layers
+            )
         ),
     )
 
     problem = TileProperties(input_grid, tile_size=1)
-
     pipeline = Pipeline(
         algorithm=algo,  # The configured NEAT algorithm
         problem=problem,  # The problem instance
@@ -135,7 +168,7 @@ def cppn_neat(input_grid: np.array, pop_size: int = 1000, species_size: int = 20
     
     if show_network:
         network = network_dict(algo.genome, state, *best)
-        visualize_labeled(algo.genome,network,["SGM"], rotate=90, save_path="network.svg", with_labels=True)
+        visualize_labeled(algo.genome,network,["SGM","TANH"], rotate=90, save_path="network.svg", with_labels=True)
 
     algo_forward = vmap(algo.forward,in_axes=(None,None,0))(state, algo.transform(state, best), problem.inputs)
     result = np.argmax(algo_forward, axis=1)
@@ -150,3 +183,15 @@ def cppn_neat(input_grid: np.array, pop_size: int = 1000, species_size: int = 20
     # unique, counts = np.unique(target, return_counts=True)
     # print(unique, counts)
     return result
+
+if __name__ == "__main__":
+    input_image = np.array(Image.open("images\piskel_example1.png.png"))[..., :3]
+
+    result = cppn_neat(input_image, pop_size=500, species_size=20, survival_threshold=0.1, generation_limit=1000, fitness_target=-5e-4, seed=123, show_network=True)
+    result = result.reshape(input_image.shape[:2])
+    print(result)
+
+    tp = TileProperties(input_image, tile_size=1)
+    print(tp.extract_metrics(tp.output_data, len(tp.unique_labels)))
+    print("--------")
+    print(tp.extract_metrics(result, len(tp.unique_labels)))
