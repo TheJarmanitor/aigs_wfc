@@ -26,13 +26,13 @@ class TileProperties(FuncFit):
         grid_info_list = []
         one_hot_list = []
         if self.hash:
-            hashed_grids = [hash_grid(grid, tile_size=1) for grid in self.grids]
+            hashed_grids = [hash_grid(grid, tile_size=self.tile_size) for grid in self.grids]
         else:
             hashed_grids = self.grids
 
         labeled_grids, unique_labels = label_grids(hashed_grids)
         for grid in labeled_grids:
-            height, width = grid.shape
+            width, height = grid.shape
             _, unique_counts = np.unique(grid, return_counts=True)
             # unique_proportions = unique_counts / (height * width)
             # proportion_list.append(unique_proportions)
@@ -97,11 +97,20 @@ class TileProperties(FuncFit):
         return self.output_data.shape
 
 # %%
-test_grid = np.array(Image.open("images/piskel_example1.png.png"))[..., :3]
+test_grid = np.array(Image.open("images/dragon_warrior_map.png"))[..., :3]
 samples_dir = 'images'
 images = [np.array(Image.open(os.path.join(samples_dir, file)))[..., :3] for file in os.listdir(samples_dir)
           if file.startswith(('piskel'))]
+hash_image, hash_dict = hash_grid(test_grid, tile_size=1, return_dict=True)
+_, unique_labels = label_grids(hash_image)
+len(hash_dict)
+# %%
+fig, axes = plt.subplots(nrows=6, ncols=6, dpi=150, figsize=(10,10))
+for tile, ax in zip(hash_dict.values(), axes.flatten()):
+    ax.imshow(tile)
 
+
+# %%
 algo = algorithm.NEAT(
     pop_size=1000,  # Population size
     species_size=20,  # Size of species
