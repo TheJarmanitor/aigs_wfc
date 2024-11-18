@@ -36,9 +36,9 @@ input_grid = np.array(Image.open("images/piskel_example1.png.png"))[..., :3]
 pop_size = 1000
 species_size = 20
 survival_threshold = 0.1 
-generation_limit = 10
-fitness_target = -1e-6
-seed = 42
+generation_limit = 100
+fitness_target = -1e-3
+seed = 2
 tile_size_cppn = 1
 show_network = False
 
@@ -59,11 +59,14 @@ output_name = "dragon"
 # ]
 
 bundle = [
-    [5, 7, 15]                      #land
-    ,[0, 1, 3, 4, 6, 16, 19]        #water
+    [5]                      #land
+    ,[0]        #water
     ,[9, 11, 33]                    #mountain
     ,[10, 13, 22, 29]               #city
     ]
+
+default_weight = 1.0
+bundle_weight = 1.0
 
 #rules folder
 path_folder = "dragon"
@@ -75,8 +78,8 @@ size = 64
 
 path_folder = "dragon"
 input_file = "output.txt"
-output_file = "output.png"
-SHOW_NUKES = True
+output_file = "output2.png"
+SHOW_NUKES = False
 #%% Execute cppn neat
 
 result_cppn_neat = grid_problem.cppn_neat(input_grid = input_grid, pop_size = pop_size, species_size= species_size
@@ -109,9 +112,9 @@ rules.output_to_folder_rules(name)
 path_to_file=f"outputs/{path_folder}/rules.pkl"
 rules = pickle.load(open(path_to_file, "rb"))
 
-local_weights = wfc.local_weight(bundle, default_weight=1.0, tile_count=len(rules))
+local_weights = wfc.local_weight(bundle, default_weight=default_weight,prob_magnitude=bundle_weight, tile_count=len(rules))
 
-wfc.wfc([*range(len(rules))], rules, size, size, weights = local_weights, path_to_output=f"outputs/{path_folder}/output.txt", layout_map = result_cppn_neat.reshape(shape))
+wfc.wfc([*range(len(rules))], rules, size, size,weights=local_weights, path_to_output=f"outputs/{path_folder}/output.txt", layout_map = result_cppn_neat.reshape(shape))
 
 #%% Execute visualize wfc
 

@@ -18,8 +18,7 @@ def wfc(tiles, rules, width, height, fixed_tiles=[], weights=None, path_to_outpu
     '''
     # 0 -> up, 1 -> right, 2 -> down, 3 -> left
     directions = [(0, 1), (1, 0), (0, -1), (-1, 0)]
-    if weights is None:
-        weights = [1 for _ in range(len(tiles))]
+
     # count the number of times this position was CENTER of a nuke
     nuke_count = [[0 for _ in range(width)] for _ in range(height)]
     # count the number of times this position was nuked (even if not the source of nuke)
@@ -109,7 +108,11 @@ def wfc(tiles, rules, width, height, fixed_tiles=[], weights=None, path_to_outpu
         return random.choice(key, jnp.array(possible_tiles), p=jnp.array(normalized_weight)).item(), rng
     
     def sample_layout(x,y) -> int:
-        return layout_map[y][x]
+        nx = round(x*(layout_map.shape[0]/width))
+        ny = round(y*(layout_map.shape[1]/height))
+        sample = layout_map[ny][nx]
+        print(f"Sampled {sample} at {x},{y}")
+        return sample
         
 
     def collapse(x, y, superposition, fixed, rng, local_weights: list = None):
@@ -322,99 +325,3 @@ def local_weight(bundle: list, prob_magnitude: float = 10.0, default_weight: flo
     
     return weight_map_norm
 
-
-
-
-if __name__ == "__main__":
-                  
-    rules_islands_beaches = [
-        #a -> a,b
-        [
-            {0,1},
-            {0,1},
-            {0,1},
-            {0,1},
-        ],
-        #b -> a,c
-        [
-            {0,2},
-            {0,2},
-            {0,2},
-            {0,2},
-        ],
-        #c -> b,c
-        [
-            {2,2},
-            {2,1},
-            {2,1},
-            {2,1},
-        ]
-    ]
-
-    rules_mountain = [
-        #a
-        [
-            {0,1}, #up -> a,b
-            {0,1}, #right -> a,b
-            {0}, #down -> a
-            {0,1}, #left -> a,b
-        ],
-        #b -> a,c
-        [
-            {2}, #up -> c
-            {0,2}, #right -> a,c
-            {0}, #down -> a
-            {0,2}, #left -> a,c
-        ],
-        #c -> b,c
-        [
-            {2}, #up -> c
-            {2,1}, #right -> b,c
-            {2,1}, #down -> b,c
-            {2,1}, #left -> b,c
-        ]
-    ]
-
-    #time testing
-    
-    path_folder = "test"
-    if len(argv) > 1:
-        path_folder = argv[1]
-
-    size = 64 if len(argv) < 3 else int(argv[2])
-    path_to_file=f"outputs/{path_folder}/rules.pkl"
-    rules = pickle.load(open(path_to_file, "rb"))
-
-    #print rules
-    for i, rule in enumerate(rules):
-        print(f"Tile {i}")
-        for j, r in enumerate(rule):
-            print(f"  {j}: {r}")
-            
-    layout_map = [[0 for _ in range(size)] for _ in range(size)]
-    
-    for x in range(size):
-        for y in range(size):
-            if x > y:
-                layout_map[y][x] = 1
-            if abs(x - y) < 2:
-                layout_map[y][x] = 2
-            if abs(size-x) < 10 and abs(size-y) < 10:
-                layout_map[y][x] = 3
-            
-    
-    #local weights definition (change this when application is up and running)
-    bundle=[
-        [8],
-        [1, 2, 3],
-        [6, 17],
-        [9]
-    ]
-    
-    local_weights = local_weight(bundle)
-    
-    start = time.time()
-    wfc([*range(len(rules))], rules, size, size, weights = local_weights, path_to_output=f"outputs/{path_folder}/output.txt", layout_map = layout_map)
-    print(f"Size {size} took {time.time()-start} seconds")
-    
-    
