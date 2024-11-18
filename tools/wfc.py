@@ -303,13 +303,13 @@ def wfc(tiles, rules, width, height, fixed_tiles=[], weights=None, path_to_outpu
         print_tiles(fixed)
 
 
-def local_weight(bundle: list, prob_magnitude: float = 10.0, default_weight: float = 0.01) -> list:
+def local_weight(bundle: list, prob_magnitude: float = 10.0, default_weight: float = 0.01, tile_count: int = 18, color_count: int = 4) -> list:
     # Initialize weight map with default values
-    weight_map = [[default_weight for _ in range(18)] for _ in range(4)]
+    weight_map = [[default_weight for _ in range(tile_count)] for _ in range(color_count)]
     
     # Update weights for tiles in the bundle
-    for tile in range(18):
-        for input_color in range(4):
+    for tile in range(tile_count):
+        for input_color in range(color_count):
             if tile in bundle[input_color]:
                 weight_map[input_color][tile] = prob_magnitude
     

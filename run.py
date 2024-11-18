@@ -26,6 +26,11 @@ start = time.time()
 
 #input for cppn
 input_grid = np.array(Image.open("images/piskel_example1.png.png"))[..., :3] 
+#input_grid = np.array(Image.open("images/dragonwarr_island.png"))[..., :3] 
+
+# samples_dir = 'images'
+# images = [Image.open(os.path.join(samples_dir, file)) for file in os.listdir(samples_dir) 
+#           if file.startswith(('piskel_'))]
 
 #setting for cppn
 pop_size = 1000
@@ -34,74 +39,33 @@ survival_threshold = 0.1
 generation_limit = 200
 fitness_target = -1e-6
 seed = 42
+tile_size_cppn = 1
 show_network = False
 
 #%% Settings for rule split wfc
 
-path_to_input_image = ".\images\dragonwarr_island.png"
+path_to_input_image = ".\images\dragon_warrior_game_map.png"
 tile_size = 16
 output_name = "dragon"
 
 #%% Settings for wfc
 
-#rules for tiles
-rules_islands_beaches = [
-    #a -> a,b
-    [
-        {0,1},
-        {0,1},
-        {0,1},
-        {0,1},
-    ],
-    #b -> a,c
-    [
-        {0,2},
-        {0,2},
-        {0,2},
-        {0,2},
-    ],
-    #c -> b,c
-    [
-        {2,2},
-        {2,1},
-        {2,1},
-        {2,1},
-    ]
-]
-
-rules_mountain = [
-    #a
-    [
-        {0,1}, #up -> a,b
-        {0,1}, #right -> a,b
-        {0}, #down -> a
-        {0,1}, #left -> a,b
-    ],
-    #b -> a,c
-    [
-        {2}, #up -> c
-        {0,2}, #right -> a,c
-        {0}, #down -> a
-        {0,2}, #left -> a,c
-    ],
-    #c -> b,c
-    [
-        {2}, #up -> c
-        {2,1}, #right -> b,c
-        {2,1}, #down -> b,c
-        {2,1}, #left -> b,c
-    ]
-]
-
 #bundle for local weights
-bundle=[
-    [8],
-    [1, 2, 3],
-    [6, 17],
-    [9]
-]
+# bundle=[
+#     [0,8, 10],        #land
+#     [1, 2, 3, 4, 5, 7, 11, 12, 13, 14, 15, 16],  #water
+#     [6, 8, 17],    #mountains
+#     [9]         #city
+# ]
 
-local_weights = wfc.local_weight(bundle)
+bundle = [
+    [5, 7, 15]                      #land
+    ,[0, 1, 3, 4, 6, 16, 19]        #water
+    ,[9, 11, 33]                    #mountain
+    ,[10, 13, 22, 29]               #city
+    ]
+
+local_weights = wfc.local_weight(bundle, default_weight=1.0)
 
 #rules folder
 path_folder = "dragon"
@@ -119,7 +83,7 @@ SHOW_NUKES = True
 
 result_cppn_neat = grid_problem.cppn_neat(input_grid = input_grid, pop_size = pop_size, species_size= species_size
                                 , survival_threshold=survival_threshold, generation_limit = generation_limit
-                                , fitness_target = fitness_target, seed = seed, show_network = show_network)
+                                , fitness_target = fitness_target, seed = seed, tile_size = tile_size_cppn, show_network = show_network)
 
 shape = input_grid.shape[0], input_grid.shape[1]
 

@@ -27,18 +27,18 @@ class TileProperties(FuncFit):
         grid_info_list = []
         one_hot_list = []
         if self.hash:
-            hashed_grids = [hash_grid(grid, tile_size=1) for grid in self.grids]
+            hashed_grids = [hash_grid(grid, self.tile_size) for grid in self.grids]
         else:
             hashed_grids = self.grids
         labeled_grids, unique_labels = label_grids(hashed_grids)
         for grid in labeled_grids:
-            height, width = grid.shape
+            width, height = grid.shape
             _, unique_counts = np.unique(grid, return_counts=True)
             # unique_proportions = unique_counts / (height * width)
             # proportion_list.append(unique_proportions)
             grid_information = []
             one_hot_output = []
-
+    
             for y in range(height):
                 for x in range(width):
                     normalized_x = (2 * x / (width - 1)) - 1  # Normalize x coordinate
@@ -133,7 +133,7 @@ class TileProperties(FuncFit):
 
 def cppn_neat(input_grid: np.array, pop_size: int = 1000, species_size: int = 20
               , survival_threshold: float = 0.1, generation_limit: int = 200
-              , fitness_target: float = -1e-6, seed: int= 42, show_network: bool = False):
+              , fitness_target: float = -1e-6, seed: int= 42, tile_size: int = 16, show_network: bool = False):
     
     algo = algorithm.NEAT(
         pop_size=pop_size,  # Population size
@@ -149,7 +149,8 @@ def cppn_neat(input_grid: np.array, pop_size: int = 1000, species_size: int = 20
         ),
     )
 
-    problem = TileProperties(input_grid, tile_size=1)
+    problem = TileProperties(input_grid, tile_size=tile_size)
+
     pipeline = Pipeline(
         algorithm=algo,  # The configured NEAT algorithm
         problem=problem,  # The problem instance
