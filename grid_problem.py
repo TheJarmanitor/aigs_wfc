@@ -30,6 +30,7 @@ class TileProperties(FuncFit):
             hashed_grids = [hash_grid(grid, self.tile_size) for grid in self.grids]
         else:
             hashed_grids = self.grids
+
         labeled_grids, unique_labels = label_grids(hashed_grids)
         for grid in labeled_grids:
             width, height = grid.shape

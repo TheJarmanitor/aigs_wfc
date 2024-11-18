@@ -9,20 +9,27 @@ def get_hash(tile):
     return hash
 
 
-def hash_grid(grid, tile_size):
+def hash_grid(grid, tile_size, return_dict=False):
+    hash_dict = {}
     W, H, _ = grid.shape
     hashed_grid = np.zeros((W // tile_size, H // tile_size))
-    for i in range(hashed_grid.shape[0]):
-        for j in range(hashed_grid.shape[1]):
-            hashed_grid[i, j] = get_hash(
-                grid[
-                    i * tile_size : tile_size * (i + 1),
-                    j * tile_size : tile_size * (j + 1),
-                ]
-            )
+    for i in range(0, W, tile_size):
+        for j in range(0, H, tile_size):
+            tile = grid[
+                i:i+tile_size,
+                j:j+tile_size,
+            ]
+            hash = get_hash(tile)
+            hashed_grid[i//tile_size, j//tile_size] = hash
+            hash_dict[hash] = tile
+    if return_dict:
+        return hashed_grid, hash_dict
     return hashed_grid
 
-def label_grids(grids, return_unique_labels=True):
+
+
+
+def label_grids(grids, hash_dict=None):
     if not isinstance(grids, list):
         grids = [grids]
     # label_grid = hashed_grid.copy()
@@ -36,9 +43,11 @@ def label_grids(grids, return_unique_labels=True):
         for key, new_value in unique_dict.items():
             copy_grid[grid == key] = new_value
         label_grids.append(copy_grid)
-    if return_unique_labels:
-        return label_grids, unique_labels
-    return label_grids
+        if hash_dict is not None:
+            label_dict = {}
+    return label_grids, unique_labels
+
+
 
 # def get_proportions(grid, unique_labels):
 #     size = grid.size
