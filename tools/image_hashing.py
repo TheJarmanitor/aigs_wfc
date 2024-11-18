@@ -29,7 +29,7 @@ def hash_grid(grid, tile_size, return_dict=False):
 
 
 
-def label_grids(grids):
+def label_grids(grids, hash_dict=None):
     if not isinstance(grids, list):
         grids = [grids]
     # label_grid = hashed_grid.copy()
@@ -43,6 +43,8 @@ def label_grids(grids):
         for key, new_value in unique_dict.items():
             copy_grid[grid == key] = new_value
         label_grids.append(copy_grid)
+        if hash_dict is not None:
+            label_dict = {}
     return label_grids, unique_labels
 
 
