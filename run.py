@@ -36,7 +36,7 @@ input_grid = np.array(Image.open("images/piskel_example1.png.png"))[..., :3]
 pop_size = 1000
 species_size = 20
 survival_threshold = 0.1 
-generation_limit = 200
+generation_limit = 10
 fitness_target = -1e-6
 seed = 42
 tile_size_cppn = 1
@@ -64,8 +64,6 @@ bundle = [
     ,[9, 11, 33]                    #mountain
     ,[10, 13, 22, 29]               #city
     ]
-
-local_weights = wfc.local_weight(bundle, default_weight=1.0)
 
 #rules folder
 path_folder = "dragon"
@@ -110,6 +108,8 @@ rules.output_to_folder_rules(name)
 
 path_to_file=f"outputs/{path_folder}/rules.pkl"
 rules = pickle.load(open(path_to_file, "rb"))
+
+local_weights = wfc.local_weight(bundle, default_weight=1.0, tile_count=len(rules))
 
 wfc.wfc([*range(len(rules))], rules, size, size, weights = local_weights, path_to_output=f"outputs/{path_folder}/output.txt", layout_map = result_cppn_neat.reshape(shape))
 
