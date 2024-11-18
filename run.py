@@ -44,26 +44,26 @@ show_network = False
 
 #%% Settings for rule split wfc
 
-path_to_input_image = ".\images\dragonwarr_island.png"
+path_to_input_image = ".\images\dragon_warrior_game_map.png"
 tile_size = 16
 output_name = "dragon"
 
 #%% Settings for wfc
 
 #bundle for local weights
-bundle=[
-    [0,8, 10],        #land
-    [1, 2, 3, 4, 5, 7, 11, 12, 13, 14, 15, 16],  #water
-    [6, 8, 17],    #mountains
-    [9]         #city
-]
+# bundle=[
+#     [0,8, 10],        #land
+#     [1, 2, 3, 4, 5, 7, 11, 12, 13, 14, 15, 16],  #water
+#     [6, 8, 17],    #mountains
+#     [9]         #city
+# ]
 
-# bundle = [
-#     [5, 7, 15]                      #land
-#     ,[0, 1, 3, 4, 6, 16, 19]        #water
-#     ,[9, 11, 33]                    #mountain
-#     ,[10, 13, 22, 29]               #city
-#     ]
+bundle = [
+    [5, 7, 15]                      #land
+    ,[0, 1, 3, 4, 6, 16, 19]        #water
+    ,[9, 11, 33]                    #mountain
+    ,[10, 13, 22, 29]               #city
+    ]
 
 local_weights = wfc.local_weight(bundle, default_weight=1.0)
 
@@ -115,6 +115,6 @@ wfc.wfc([*range(len(rules))], rules, size, size, weights = local_weights, path_t
 
 #%% Execute visualize wfc
 
-visualize_wfc.visualize_wfc(path_folder = path_folder, input_file = input_file, output_file = "output.png", SHOW_NUKES = SHOW_NUKES)
+visualize_wfc.visualize_wfc(path_folder = path_folder, input_file = input_file, output_file = output_file, SHOW_NUKES = SHOW_NUKES)
 
 print(f"Running time: {time.time()-start} seconds")
