@@ -44,7 +44,8 @@ def label_grids(grids, hash_dict=None):
             copy_grid[grid == key] = new_value
         label_grids.append(copy_grid)
         if hash_dict is not None:
-            label_dict = {}
+            label_dict = dict(zip(unique_labels, hash_dict.values()))
+            return label_grids, unique_labels, label_dict
     return label_grids, unique_labels
 
 
