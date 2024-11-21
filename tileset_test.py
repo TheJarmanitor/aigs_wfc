@@ -22,7 +22,7 @@ seed = 42
 show_network = False
 
 
-result_cppn_neat = cppn_neat(input_grid = input_grid, pop_size = pop_size, species_size= species_size
+result_cppn_neat = cppn_neat(input_grid = input_grid, pop_size = pop_size, species_size= species_size, tile_size=tile_size
                                 , survival_threshold=survival_threshold, generation_limit = generation_limit
                                 , fitness_target = fitness_target, seed = seed, show_network = show_network)
 # %%
