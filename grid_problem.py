@@ -83,7 +83,39 @@ class TileProperties(FuncFit):
                 edge_ratio[index] += jnp.sum((image[:-1, :] == i) & (image[1:, :] == j))
                 edge_ratio[index] += jnp.sum((image[:, :-1] == i) & (image[:, 1:] == j))
         edge_ratio = jnp.array(edge_ratio) / jnp.sum(jnp.array(edge_ratio))
-        return jnp.concatenate([tiles_ratio, edge_ratio])
+
+        symm_h = 0
+        symm_v = 0
+
+        for symm_x in range(width-1):
+            for i in range(1,min(symm_x+1, width-(symm_x+1))+1):
+                symm_v += jnp.sum(image[:, symm_x-i+1] == image[:, symm_x+i])
+        for symm_y in range(height-1):
+            for i in range(1,min(symm_y+1, height-(symm_y+1))+1):
+                symm_h += jnp.sum(image[symm_y-i+1, :] == image[symm_y+i, :])
+
+        # https://oeis.org/A002620 -> number of pairs per elements in vector of length n
+        symm_h /= ((np.ceil(height/2)*np.floor(height/2))*width)
+        symm_v /= ((np.ceil(width/2)*np.floor(width/2))*height)
+
+        #diagonal symmetry
+        symm_d = 0
+        symm_dd = 0
+        for i in range(0, min(width, height)):
+            for j in range(0, i):
+                symm_d += image[i,j] == image[j,i]
+
+        for i in range(0, min(width, height)):
+            for j in range(0, height-i-1):
+                symm_dd += image[i,j] == image[width-j-1,height-i-1]
+
+        s = min(width, height)
+        symm_d /= s*(s-1)/2
+        symm_dd /= s*(s-1)/2
+            
+        symmetry_ratio = jnp.array([symm_h, symm_v, symm_d, symm_dd])
+
+        return jnp.concatenate([tiles_ratio, edge_ratio, symmetry_ratio])
         
 
 
@@ -189,7 +221,7 @@ def cppn_neat(input_grid: np.array, pop_size: int = 1000, species_size: int = 20
 if __name__ == "__main__":
     input_image = np.array(Image.open("images\piskel_example1.png.png"))[..., :3]
 
-    result = cppn_neat(input_image, pop_size=500, species_size=20, survival_threshold=0.1, generation_limit=1000, fitness_target=-5e-4, seed=123, show_network=True)
+    result = cppn_neat(input_image, pop_size=500, species_size=20, survival_threshold=0.1, generation_limit=1000, fitness_target=-5e-4, seed=123, show_network=False)
     result = result.reshape(input_image.shape[:2])
     print(result)
 

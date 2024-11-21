@@ -5,7 +5,7 @@ import jax.numpy as jnp
 from sys import argv
 from jax import random
 
-def wfc(tiles, rules, width, height, fixed_tiles=[], weights=None, path_to_output=None, layout_map = None):
+def wfc(tiles, rules, width, height, fixed_tiles=[], weights=None, path_to_output=None, layout_map = None, seed=42):
     '''
     Wave Function Collapse algorithm
     :param tiles: list of tile names
@@ -111,7 +111,7 @@ def wfc(tiles, rules, width, height, fixed_tiles=[], weights=None, path_to_outpu
         nx = round(x*(layout_map.shape[0]/width))
         ny = round(y*(layout_map.shape[1]/height))
         sample = layout_map[ny][nx]
-        print(f"Sampled {sample} at {x},{y}")
+        #print(f"Sampled {sample} at {x},{y}")
         return sample
         
 
@@ -252,13 +252,13 @@ def wfc(tiles, rules, width, height, fixed_tiles=[], weights=None, path_to_outpu
         return True
     
 
-    def run(superposition, fixed):
+    def run(superposition, fixed, seed):
         '''
         runs the algorithm until completion or failure
     
         :return: True if the algorithm was successful, False otherwise
         '''
-        rng = random.PRNGKey(0)
+        rng = random.PRNGKey(seed)
         while True:
             #x, y = collapse_manhattan_heuristic(superposition, fixed)
             x, y = collapse_lowest_entropy_heuristic(superposition, fixed)
@@ -295,7 +295,7 @@ def wfc(tiles, rules, width, height, fixed_tiles=[], weights=None, path_to_outpu
                 print("Invalid fixed tiles")
                 return
             
-        if run(superposition, fixed):
+        if run(superposition, fixed, seed):
             break
         #count percentage of fixed tiles
         fixed_count = sum(1 for row in fixed for cell in row if cell != -1)
