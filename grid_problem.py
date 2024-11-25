@@ -16,22 +16,20 @@ from tools.visualize_labeled import visualize_labeled, network_dict
 
 # %%
 class TileProperties(FuncFit):
-    def __init__(self, grids, tile_size, hash=True, error_method="mse") -> None:
-        self.grids = grids if isinstance(grids, list) else [grids]
+    def __init__(self, grid, tile_size, hash=True, error_method="mse") -> None:
+        self.grid = grid
         self.tile_size = tile_size
-        self.hash = hash
+        # self.hash = hash
         self.error_method = error_method
         self._prepare_data()
 
     def _prepare_data(self):
         grid_info_list = []
         one_hot_list = []
-        if self.hash:
-            hashed_grids = [hash_grid(grid, self.tile_size) for grid in self.grids]
-        else:
-            hashed_grids = self.grids
+        hashed_grid, hash_tile_dict = hash_grid(self.grid, self.tile_size, return_dict=True)
 
-        labeled_grids, unique_labels = label_grids(hashed_grids)
+        labeled_grids, unique_labels, label_tile_dict = label_grids(hashed_grid, hash_dict=hash_tile_dict)
+        self.label_tile_dict = label_tile_dict
         for grid in labeled_grids:
             width, height = grid.shape
             _, unique_counts = np.unique(grid, return_counts=True)
@@ -39,7 +37,7 @@ class TileProperties(FuncFit):
             # proportion_list.append(unique_proportions)
             grid_information = []
             one_hot_output = []
-    
+
             for y in range(height):
                 for x in range(width):
                     normalized_x = (2 * x / (width - 1)) - 1  # Normalize x coordinate
@@ -167,7 +165,7 @@ class TileProperties(FuncFit):
 def cppn_neat(input_grid: np.array, pop_size: int = 1000, species_size: int = 20
               , survival_threshold: float = 0.1, generation_limit: int = 200
               , fitness_target: float = -1e-6, seed: int= 42, tile_size: int = 16, show_network: bool = False):
-    
+
     algo = algorithm.NEAT(
         pop_size=pop_size,  # Population size
         species_size=species_size,  # Size of species
@@ -192,14 +190,14 @@ def cppn_neat(input_grid: np.array, pop_size: int = 1000, species_size: int = 20
         seed=seed,  # Random seed for reproducibility
     )
 
-    
-    
+
+
     state = pipeline.setup()
     # Run the NEAT algorithm until termination
     state, best = pipeline.auto_run(state)
     # Display the results of the pipeline run
     pipeline.show(state, best)
-    
+
     if show_network:
         network = network_dict(algo.genome, state, *best)
         visualize_labeled(algo.genome,network,["SGM","TANH"], rotate=90, save_path="network.svg", with_labels=True)
@@ -209,7 +207,7 @@ def cppn_neat(input_grid: np.array, pop_size: int = 1000, species_size: int = 20
     # print(result)
     # result = result.reshape(test_grid.shape[:2])
     # print(result)
-    
+
     # unique, counts = np.unique(result, return_counts=True)
     # print(unique, counts)
     # print("----------")
