@@ -18,10 +18,11 @@ from jax import random
 from PIL import Image
 from sys import argv
 from typing import List
+from tensorneat import algorithm, genome, common
 from tools import image_hashing, rule_split, visualize_labeled, visualize_wfc, wfc
 
-for ratio in [10]:
-    for inp_img in range(1,2):
+for ratio in [1]:
+    for inp_img in range(1,2): #input images example 1
         input_grid = np.array(Image.open(f"images/piskel_example{inp_img}.png.png"))[..., :3] 
         for x in range(1,2):
             start = time.time()
@@ -82,12 +83,17 @@ for ratio in [10]:
 
             path_folder = "dragon"
             input_file = "output.txt"
-            output_file = f"output_local{ratio}_{inp_img}_{x}.png"
+            output_file = f"output_random{ratio}_{inp_img}_{x}.png"
             SHOW_NUKES = False
+            
+            def gaussian_(z): 
+                return 1 / (jnp.std(z) * jnp.sqrt(2*jnp.pi)) * jnp.exp(-(z-jnp.mean(z))**2 / (2 * jnp.var(z)))
+
+            activation_functions = [common.ACT.sigmoid, common.ACT.tanh, common.ACT.sin, gaussian_] #
             #%% Execute cppn neat
 
             result_cppn_neat = grid_problem.cppn_neat(input_grid = input_grid, pop_size = pop_size, species_size= species_size
-                                            , survival_threshold=survival_threshold, generation_limit = generation_limit
+                                            , survival_threshold=survival_threshold, activation_functions = activation_functions, generation_limit = generation_limit
                                             , fitness_target = fitness_target, seed = seed, tile_size = tile_size_cppn, show_network = show_network)
 
             shape = input_grid.shape[0], input_grid.shape[1]
@@ -118,7 +124,7 @@ for ratio in [10]:
 
             local_weights = wfc.local_weight(bundle, default_weight=default_weight,prob_magnitude=bundle_weight, tile_count=len(rules))
 
-            wfc.wfc([*range(len(rules))], rules, size, size,weights=local_weights, path_to_output=f"outputs/{path_folder}/output.txt", layout_map = result_cppn_neat.reshape(shape), seed=seed)
+            wfc.wfc([*range(len(rules))], rules, size, size,weights=None, path_to_output=f"outputs/{path_folder}/output.txt", layout_map = result_cppn_neat.reshape(shape), seed=seed)
 
             #%% Execute visualize wfc
 

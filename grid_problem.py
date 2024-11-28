@@ -160,10 +160,9 @@ class TileProperties(FuncFit):
     def output_shape(self):
         return self.output_data.shape
 
-# %%
 
 def cppn_neat(input_grid: np.array, pop_size: int = 1000, species_size: int = 20
-              , survival_threshold: float = 0.1, generation_limit: int = 200
+              , survival_threshold: float = 0.1, activation_functions: list = [common.ACT.sigmoid], generation_limit: int = 200
               , fitness_target: float = -1e-6, seed: int= 42, tile_size: int = 16, show_network: bool = False):
 
     algo = algorithm.NEAT(
@@ -175,7 +174,7 @@ def cppn_neat(input_grid: np.array, pop_size: int = 1000, species_size: int = 20
             num_outputs=4,  # Number of output categories (Red, Brown, Green, Blue)
             #output_transform=common.ACT.sigmoid,  # Activation function for output layer
             node_gene=genome.DefaultNode(
-                activation_options=[common.ACT.sigmoid, common.ACT.tanh],  # Activation functions for hidden layers
+                activation_options=activation_functions,  # Activation functions for hidden layers
             )
         ),
     )
@@ -200,7 +199,7 @@ def cppn_neat(input_grid: np.array, pop_size: int = 1000, species_size: int = 20
 
     if show_network:
         network = network_dict(algo.genome, state, *best)
-        visualize_labeled(algo.genome,network,["SGM","TANH"], rotate=90, save_path="network.svg", with_labels=True)
+        visualize_labeled(algo.genome,network,["SIGM", "TANH", "SIN"], rotate=90, save_path="network.svg", with_labels=True)
 
     algo_forward = vmap(algo.forward,in_axes=(None,None,0))(state, algo.transform(state, best), problem.inputs)
     result = np.argmax(algo_forward, axis=1)
