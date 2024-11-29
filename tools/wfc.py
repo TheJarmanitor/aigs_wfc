@@ -108,6 +108,7 @@ def wfc(tiles, rules, width, height, fixed_tiles=[], weights=None, path_to_outpu
         return random.choice(key, jnp.array(possible_tiles), p=jnp.array(normalized_weight)).item(), rng
     
     def sample_layout(x,y) -> int:
+        y = height - y - 1
         nx = round(x*(layout_map.shape[0]/width))
         ny = round(y*(layout_map.shape[1]/height))
         sample = layout_map[ny][nx]

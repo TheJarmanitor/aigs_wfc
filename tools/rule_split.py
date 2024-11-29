@@ -147,13 +147,13 @@ if __name__ == "__main__":
     rules = RuleSet([list(map(lambda x: Color(x[0], x[1], x[2]), row)) for row in img], tile_size)
     print(f"Created {rules.id_counter} tiles")
     # pinrt id map
-    for row in rules.image_id:
-        print(row)
+    # for row in rules.image_id:
+      #  print(row)
     # print rules
-    for t in rules.tiles:
-        print(f"Tile {t.id}")
-        for i, r in enumerate(t.rules):
-            print(f"  {i}: {r}")
+    # for t in rules.tiles:
+    #    print(f"Tile {t.id}")
+    #    for i, r in enumerate(t.rules):
+    #        print(f"  {i}: {r}")
     name = argv[3]
     rules.output_to_folder_rules(name)
 

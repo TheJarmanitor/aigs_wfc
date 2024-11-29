@@ -5,6 +5,7 @@ from tensorneat.pipeline import Pipeline
 from tensorneat import algorithm, genome, common
 from PIL import Image
 from tools.image_hashing import hash_grid, label_grids
+from tools.visualize_cppn import visualize_output_grid
 
 import os
 import matplotlib.pyplot as plt
@@ -16,11 +17,12 @@ from tools.visualize_labeled import visualize_labeled, network_dict
 
 # %%
 class TileProperties(FuncFit):
-    def __init__(self, grid, tile_size, hash=True, error_method="mse") -> None:
+    def __init__(self, grid, tile_size, grid_size=None, hash=True, error_method="mse") -> None:
         self.grid = grid
         self.tile_size = tile_size
         # self.hash = hash
         self.error_method = error_method
+        self.grid_size = grid_size
         self._prepare_data()
 
     def _prepare_data(self):
@@ -29,26 +31,33 @@ class TileProperties(FuncFit):
         hashed_grid, hash_tile_dict = hash_grid(self.grid, self.tile_size, return_dict=True)
 
         labeled_grids, unique_labels, label_tile_dict = label_grids(hashed_grid, hash_dict=hash_tile_dict)
+
+        grid = labeled_grids[0]
         self.label_tile_dict = label_tile_dict
-        for grid in labeled_grids:
-            width, height = grid.shape
-            _, unique_counts = np.unique(grid, return_counts=True)
-            # unique_proportions = unique_counts / (height * width)
-            # proportion_list.append(unique_proportions)
-            grid_information = []
-            one_hot_output = []
 
-            for y in range(height):
-                for x in range(width):
-                    normalized_x = (2 * x / (width - 1)) - 1  # Normalize x coordinate
-                    normalized_y = (2 * y / (height - 1)) - 1  # Normalize y coordinate
-                    coordinates = np.array([normalized_x, normalized_y])
-                    one_hot = np.eye(len(unique_labels))[int(grid[x, y])]
+        width, height = grid.shape if self.grid_size is None else self.grid_size
+        #_, unique_counts = np.unique(grid, return_counts=True)
+        # unique_proportions = unique_counts / (height * width)
+        # proportion_list.append(unique_proportions)
+        grid_information = []
+        one_hot_output = []
 
-                    grid_information.append(coordinates)
-                    one_hot_output.append(one_hot)
-            grid_info_list.append(np.array(grid_information))
-            one_hot_list.append(np.array(one_hot_output))
+        #inpt data
+        for y in range(width):
+            for x in range(height):
+                normalized_x = (2 * x / (width - 1)) - 1  # Normalize x coordinate
+                normalized_y = (2 * y / (height - 1)) - 1  # Normalize y coordinate
+                coordinates = np.array([normalized_x, normalized_y])
+                grid_information.append(coordinates)
+        
+        #target data
+        for y in range(grid.shape[0]):
+            for x in range(grid.shape[1]):
+                one_hot = np.eye(len(unique_labels))[int(grid[x, y])]
+                one_hot_output.append(one_hot)
+
+        grid_info_list.append(np.array(grid_information))
+        one_hot_list.append(np.array(one_hot_output))
 
         self.input_data = jnp.concatenate(grid_info_list, axis=0)
         self.output_data = jnp.concatenate(one_hot_list, axis=0)
@@ -57,13 +66,18 @@ class TileProperties(FuncFit):
         self.width = width
         self.height = height
 
-        self.target = self.extract_metrics(self.output_data, len(unique_labels))
-        print(jnp.argmax(self.output_data,axis=1).reshape(self.height, self.width))
+        self.target = self.extract_metrics(self.output_data, len(unique_labels), custom_shape=grid.shape)
 
-    def extract_metrics(self, image, colors):
+    def extract_metrics(self, image, colors, custom_shape=None):
         if image.shape[1] == colors:
-            image = jnp.argmax(image, axis=1).reshape(self.height, self.width)
+            image = jnp.argmax(image, axis=1)
+            
         height, width = self.width, self.height
+        if custom_shape is not None:
+            height, width = custom_shape
+        
+        image = image.reshape(height, width)
+
         if colors is list:
             colors = len(colors)
 
@@ -161,9 +175,10 @@ class TileProperties(FuncFit):
         return self.output_data.shape
 
 
-def cppn_neat(input_grid: np.array, pop_size: int = 1000, species_size: int = 20
+def cppn_neat(input_grid: np.array, pop_size: int = 1000, species_size: int = 20, grid_size: tuple = None
               , survival_threshold: float = 0.1, activation_functions: list = [common.ACT.sigmoid], generation_limit: int = 200
-              , fitness_target: float = -1e-6, seed: int= 42, tile_size: int = 16, show_network: bool = False):
+              , fitness_target: float = -1e-6, seed: int= 42, tile_size: int = 16, show_network: bool = False, activation_labels: list = ["SGM"]
+              , visualize_output_path: str = None):
 
     algo = algorithm.NEAT(
         pop_size=pop_size,  # Population size
@@ -179,7 +194,7 @@ def cppn_neat(input_grid: np.array, pop_size: int = 1000, species_size: int = 20
         ),
     )
 
-    problem = TileProperties(input_grid, tile_size=tile_size)
+    problem = TileProperties(input_grid, tile_size=tile_size, grid_size=grid_size)
 
     pipeline = Pipeline(
         algorithm=algo,  # The configured NEAT algorithm
@@ -195,11 +210,11 @@ def cppn_neat(input_grid: np.array, pop_size: int = 1000, species_size: int = 20
     # Run the NEAT algorithm until termination
     state, best = pipeline.auto_run(state)
     # Display the results of the pipeline run
-    pipeline.show(state, best)
+    # pipeline.show(state, best)
 
     if show_network:
         network = network_dict(algo.genome, state, *best)
-        visualize_labeled(algo.genome,network,["SIGM", "TANH", "SIN"], rotate=90, save_path="network.svg", with_labels=True)
+        visualize_labeled(algo.genome,network,activation_labels, rotate=90, save_path="network.svg", with_labels=True)
 
     algo_forward = vmap(algo.forward,in_axes=(None,None,0))(state, algo.transform(state, best), problem.inputs)
     result = np.argmax(algo_forward, axis=1)
@@ -213,7 +228,11 @@ def cppn_neat(input_grid: np.array, pop_size: int = 1000, species_size: int = 20
     # target = np.argmax(problem.output_data, axis=1)
     # unique, counts = np.unique(target, return_counts=True)
     # print(unique, counts)
-    return result
+
+    if visualize_output_path is not None:
+        visualize_output_grid(result.reshape(grid_size), input_grid, tile_size, visualize_output_path, 10)
+
+    return result, problem.label_tile_dict
 
 if __name__ == "__main__":
     input_image = np.array(Image.open("images\piskel_example1.png.png"))[..., :3]
