@@ -11,9 +11,11 @@ import os
 import matplotlib.pyplot as plt
 import jax.numpy as jnp
 import numpy as np
-from jax import vmap
+from jax import vmap, jit
+from jax.lax import fori_loop, while_loop
 
 from tools.visualize_labeled import visualize_labeled, network_dict
+
 
 # %%
 class TileProperties(FuncFit):
@@ -82,37 +84,73 @@ class TileProperties(FuncFit):
             colors = len(colors)
 
         # tiles ratio
-        tiles_ratio = [0 for _ in range(colors)]
-        for i in range(colors):
-            tiles_ratio[i] = jnp.sum(image == i)
-        tiles_ratio = jnp.array(tiles_ratio) / (height * width)
+        tiles_ratio = jnp.zeros(colors)
+        def tiles_ratio_loop(i, tiles_ratio):
+            tiles_ratio = tiles_ratio.at[i].set(jnp.sum(image == i))
+            return tiles_ratio
+        tiles_ratio = fori_loop(0, colors, tiles_ratio_loop, tiles_ratio)
+
+#        for i in range(colors):
+#            tiles_ratio[i] = jnp.sum(image == i)
+        tiles_ratio = 1.5 * jnp.array(tiles_ratio) / (height * width)
 
         # edge ratio
-        edge_ratio = [0 for _ in range(colors**2)]
-        for i in range(colors):
-            for j in range(colors):
-                index = min(i*colors+j,j*colors+i)
-                edge_ratio[index] += jnp.sum((image[:-1, :] == i) & (image[1:, :] == j))
-                edge_ratio[index] += jnp.sum((image[:, :-1] == i) & (image[:, 1:] == j))
-        edge_ratio = jnp.array(edge_ratio) / jnp.sum(jnp.array(edge_ratio))
+        edge_ratio = jnp.zeros(colors**2)
+
+        @jit
+        def edge_ratio_loop(i, edge_ratio):
+            a,b = i//colors, i%colors
+            index = jnp.minimum(a*colors+b,b*colors+a)
+            edge_ratio = edge_ratio.at[index].set(jnp.sum((image[:-1, :] == a) & (image[1:, :] == b)) \
+                + jnp.sum((image[:, :-1] == a) & (image[:, 1:] == b)))
+            return edge_ratio
+        
+        edge_ratio = jnp.array(fori_loop(0, colors**2, edge_ratio_loop, edge_ratio))
+#        for i in range(colors):
+#            for j in range(colors):
+#                index = min(i*colors+j,j*colors+i)
+#                edge_ratio[index] += jnp.sum((image[:-1, :] == i) & (image[1:, :] == j))
+#                edge_ratio[index] += jnp.sum((image[:, :-1] == i) & (image[:, 1:] == j))
+#        edge_ratio = jnp.array(edge_ratio)
+        edge_ratio = jnp.sqrt(edge_ratio / ((height-1)**2 + (width-1)**2))
 
         symm_h = 0
         symm_v = 0
 
-        for symm_x in range(width-1):
-            for i in range(1,min(symm_x+1, width-(symm_x+1))+1):
-                symm_v += jnp.sum(image[:, symm_x-i+1] == image[:, symm_x+i])
-        for symm_y in range(height-1):
-            for i in range(1,min(symm_y+1, height-(symm_y+1))+1):
-                symm_h += jnp.sum(image[symm_y-i+1, :] == image[symm_y+i, :])
+        @jit
+        def symm_loop_vert(a, symm_v):
+            symm_x = a // (width-1)
+            i = a % (width-1)
+            symm_v += jnp.sum(image[:, symm_x-i+1] == image[:, symm_x+i]) * ((i < symm_x) * (symm_x+i < width))
+            return symm_v
+        
+        @jit
+        def symm_loop_hor(a, symm_h):
+            symm_y = a // (height-1)
+            i = a % (height-1)
+            symm_h += jnp.sum(image[symm_y-i+1, :] == image[symm_y+i, :]) * ((i < symm_y) * (symm_y+i < height))
+            return symm_h
+        
+        symm_v = fori_loop(0, (width-1)**2, symm_loop_vert, symm_v)
+        symm_h = fori_loop(0, (height-1)**2, symm_loop_hor, symm_h)
 
+
+#        for symm_x in range(width-1):
+#            for i in range(1,min(symm_x+1, width-(symm_x+1))+1):
+#                symm_v += jnp.sum(image[:, symm_x-i+1] == image[:, symm_x+i])
+#        for symm_y in range(height-1):
+#            for i in range(1,min(symm_y+1, height-(symm_y+1))+1):
+#                symm_h += jnp.sum(image[symm_y-i+1, :] == image[symm_y+i, :])
+#
         # https://oeis.org/A002620 -> number of pairs per elements in vector of length n
         symm_h /= ((np.ceil(height/2)*np.floor(height/2))*width)
         symm_v /= ((np.ceil(width/2)*np.floor(width/2))*height)
 
         #diagonal symmetry
+        
         symm_d = 0
         symm_dd = 0
+
         for i in range(0, min(width, height)):
             for j in range(0, i):
                 symm_d += image[i,j] == image[j,i]
@@ -131,7 +169,6 @@ class TileProperties(FuncFit):
         
 
 
-
     def evaluate(self, state, randkey, act_func, params):
 
         predict = vmap(act_func, in_axes=(None, None, 0))(
@@ -140,23 +177,23 @@ class TileProperties(FuncFit):
         predict = jnp.argmax(predict, axis=1)
         predict = jnp.eye(len(self.unique_labels))[predict]
         predict_metrics = self.extract_metrics(predict, len(self.unique_labels))
-
-        if self.error_method == "mse":
-                loss = jnp.mean((predict_metrics - self.target) ** 2)
-
-        elif self.error_method == "rmse":
-            loss = jnp.sqrt(jnp.mean((predict_metrics - self.target) ** 2))
-
-        elif self.error_method == "mae":
-            loss = jnp.mean(jnp.abs(predict_metrics - self.target))
-
-        elif self.error_method == "mape":
-            loss = jnp.mean(jnp.abs((predict_metrics - self.target) / self.target))
-
-        else:
-            raise NotImplementedError
-
-        return -loss
+#
+#        if self.error_method == "mse":
+#                loss = jnp.mean((predict_metrics - self.target) ** 2)
+#
+#        elif self.error_method == "rmse":
+#            loss = jnp.sqrt(jnp.mean((predict_metrics - self.target) ** 2))
+#
+#        elif self.error_method == "mae":
+#            loss = jnp.mean(jnp.abs(predict_metrics - self.target))
+#
+#        elif self.error_method == "mape":
+#            loss = jnp.mean(jnp.abs((predict_metrics - self.target) / self.target))
+#
+#        else:
+#            raise NotImplementedError
+#
+        return -jnp.sqrt(jnp.mean((predict_metrics - self.target) ** 2))
 
     @property
     def inputs(self):
@@ -180,6 +217,9 @@ def cppn_neat(input_grid: np.array, pop_size: int = 1000, species_size: int = 20
               , fitness_target: float = -1e-6, seed: int= 42, tile_size: int = 16, show_network: bool = False, activation_labels: list = ["SGM"]
               , visualize_output_path: str = None):
 
+    problem = TileProperties(input_grid, tile_size=tile_size, grid_size=grid_size, error_method="rmse")
+
+
     algo = algorithm.NEAT(
         pop_size=pop_size,  # Population size
         species_size=species_size,  # Size of species
@@ -194,8 +234,7 @@ def cppn_neat(input_grid: np.array, pop_size: int = 1000, species_size: int = 20
         ),
     )
 
-    problem = TileProperties(input_grid, tile_size=tile_size, grid_size=grid_size)
-
+    
     pipeline = Pipeline(
         algorithm=algo,  # The configured NEAT algorithm
         problem=problem,  # The problem instance
@@ -213,11 +252,14 @@ def cppn_neat(input_grid: np.array, pop_size: int = 1000, species_size: int = 20
     # pipeline.show(state, best)
 
     if show_network:
-        network = network_dict(algo.genome, state, *best)
-        visualize_labeled(algo.genome,network,activation_labels, rotate=90, save_path="network.svg", with_labels=True)
+        network = network_dict(pipeline.algorithm.genome, state, *best)
+        path_to_netowrk = "network.svg" if visualize_output_path is None else visualize_output_path.replace(".png", "_network.svg")
+        visualize_labeled(pipeline.algorithm.genome,network,activation_labels, rotate=90, save_path=path_to_netowrk, with_labels=True)
 
-    algo_forward = vmap(algo.forward,in_axes=(None,None,0))(state, algo.transform(state, best), problem.inputs)
+    algo_forward = vmap(pipeline.algorithm.forward,in_axes=(None,None,0))(state, pipeline.algorithm.transform(state, best), problem.inputs)
     result = np.argmax(algo_forward, axis=1)
+    print(f"target metrics: {problem.target}")
+    print(f"result metrics: {problem.extract_metrics(algo_forward, 4)}")
     # print(result)
     # result = result.reshape(test_grid.shape[:2])
     # print(result)
@@ -230,7 +272,9 @@ def cppn_neat(input_grid: np.array, pop_size: int = 1000, species_size: int = 20
     # print(unique, counts)
 
     if visualize_output_path is not None:
-        visualize_output_grid(result.reshape(grid_size), input_grid, tile_size, visualize_output_path, 10)
+        visualize_output_grid(result.reshape(grid_size), input_grid, tile_size, visualize_output_path, 1)
+        new_path = visualize_output_path.replace(".png", "_upscaled.png")
+        visualize_output_grid(result.reshape(grid_size), input_grid, tile_size, new_path, 10)
 
     return result, problem.label_tile_dict
 
