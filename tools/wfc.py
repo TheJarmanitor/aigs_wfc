@@ -23,7 +23,7 @@ def wfc(tiles, rules, width, height, fixed_tiles=[], weights=None, path_to_outpu
     nuke_count = [[0 for _ in range(width)] for _ in range(height)]
     # count the number of times this position was nuked (even if not the source of nuke)
     nuked_times = [[0 for _ in range(width)] for _ in range(height)]
-    nuke_treshold = 5
+    nuke_treshold = 12
 
     def collapse_lowest_entropy_heuristic(superposition, fixed):
         '''
@@ -288,6 +288,9 @@ def wfc(tiles, rules, width, height, fixed_tiles=[], weights=None, path_to_outpu
         # -1 ->isnt fixed, 0+ -> fixed to that tile
         fixed = [[-1 for _ in range(width)] for _ in range(height)]
 
+        nuked_times = [[0 for _ in range(width)] for _ in range(height)]
+        nuke_count = [[0 for _ in range(width)] for _ in range(height)]
+
 
         for x, y, tile in fixed_tiles:
             fixed[y][x] = tile
@@ -299,6 +302,7 @@ def wfc(tiles, rules, width, height, fixed_tiles=[], weights=None, path_to_outpu
         if run(superposition, fixed, seed):
             break
         #count percentage of fixed tiles
+        seed += 1
         fixed_count = sum(1 for row in fixed for cell in row if cell != -1)
         print(f"Failed ({100*fixed_count/(width*height):.3f}% collapsed), retrying")
     if path_to_output is not None:

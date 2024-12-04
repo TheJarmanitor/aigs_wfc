@@ -21,10 +21,10 @@ from typing import List
 from tensorneat import algorithm, genome, common
 from tools import image_hashing, rule_split, visualize_labeled, visualize_wfc, wfc
 
-for ratio in [100]:
+for ratio in [10,20,50,100]:
     for inp_img in range(1,2): #input images example 1
-        input_grid = np.array(Image.open(f"images/piskel_example7.png"))[..., :3] 
-        for x in range(1,2):
+        input_grid = np.array(Image.open(f"images/piskel_example1.png.png"))[..., :3] 
+        for x in range(1,3):
             start = time.time()
 
             #%% Settings & input for cppn neat
@@ -41,26 +41,42 @@ for ratio in [100]:
             pop_size = 400
             species_size = 20
             survival_threshold = 0.1 
-            generation_limit = 100
+            generation_limit = 40
             fitness_target = -1e-3
-            seed = ratio*100 + x + 5
+            seed = ratio*100 + x
             tile_size_cppn = 1
             show_network = True
             cppn_grid_size = (12,12)
             #%% Settings for rule split wfc
 
-            path_to_input_image = ".\images\dragonwarr_island.png"
+            path_to_input_image = ".\images\pokemon_route_114.png"
             tile_size = 16
-            output_name = "dragon"
+            output_name = "pokemon"
+
+            os.makedirs(f"outputs/{output_name}", exist_ok=True)
 
             #%% Settings for wfc
 
             #bundle for local weights
-            bundle=[
+            bundle_dragon_warr=[
                 [0,10],        #land
                 [3],  #water
                 [6, 8, 17],    #mountains
                 [9]         #city
+            ]
+
+            bundle_pokemon_103=[
+                [19,20],        #land
+                [3],  #water
+                [0,1,11,12],         #forest
+                [74]    #path
+            ]
+
+            bundle_pokemon_114=[
+                [130,51,57],        #land
+                [46],  #water
+                [71,97],         #path
+                [29,28,39,40,123,128]    #house
             ]
 
             bundle_colors_in_cppn = [
@@ -70,27 +86,21 @@ for ratio in [100]:
                 [ 211, 26,  26]  #city
             ]
 
-            #bundle = [
-            #    [9, 11, 22]                    #mountain
-            #    ,[5,7,15,23]                      #land
-            #    ,[0,1,3,16,30]        #water
-            #    ,[10, 13, 29]               #city
-            #    ]
+            bundle = bundle_pokemon_114
+
 
             default_weight = 1.0
             bundle_weight = ratio
 
             #rules folder
-            path_folder = "dragon"
+            path_folder = output_name
 
             #output size pixels
-            size = 100
+            size = 64
 
             #%% Settings for visualize wfc
-
-            path_folder = "dragon"
             input_file = "output.txt"
-            output_file = f"output_random{ratio}_{inp_img}_{x}.png"
+            output_file = f"output_pokemon_w{ratio}_{inp_img}_{x}.png"
             SHOW_NUKES = False
             
             def gaussian_(z): 
@@ -112,7 +122,7 @@ for ratio in [100]:
                                             , survival_threshold=survival_threshold, activation_functions = activation_functions, generation_limit = generation_limit
                                             , fitness_target = fitness_target, seed = seed, tile_size = tile_size_cppn
                                             , show_network = show_network, activation_labels= activation_labels, grid_size=cppn_grid_size
-                                            , visualize_output_path = f"outputs/{path_folder}/cppn_output.png"
+                                            , visualize_output_path = None
                                             )
 
             print(f"Result: \n{result_cppn_neat.reshape(cppn_grid_size)}")
@@ -140,15 +150,15 @@ for ratio in [100]:
             img = np.array(img)
             tile_size = int(tile_size)
             rules = rule_split.RuleSet([list(map(lambda x: rule_split.Color(x[0], x[1], x[2]), row)) for row in img], tile_size)
-            #print(f"Created {rules.id_counter} tiles")
-            ## print id map
-            #for row in rules.image_id:
-            #    print(row)
-            ## print rules
-            #for t in rules.tiles:
-            #    print(f"Tile {t.id}")
-            #    for i, r in enumerate(t.rules):
-            #        print(f"  {i}: {r}")
+            print(f"Created {rules.id_counter} tiles")
+            # print id map
+            for row in rules.image_id:
+                print(row)
+            # print rules
+            for t in rules.tiles:
+                print(f"Tile {t.id}")
+                for i, r in enumerate(t.rules):
+                    print(f"  {i}: {r}")
             name = output_name
             rules.output_to_folder_rules(name)
 
