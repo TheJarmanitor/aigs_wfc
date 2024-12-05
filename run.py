@@ -49,9 +49,9 @@ for ratio in [10,20,50,100]:
             cppn_grid_size = (12,12)
             #%% Settings for rule split wfc
 
-            path_to_input_image = ".\images\pokemon_route_114.png"
+            path_to_input_image = ".\images\pokemon_sootopolis.png"
             tile_size = 16
-            output_name = "pokemon"
+            output_name = "pokemonsoot"
 
             os.makedirs(f"outputs/{output_name}", exist_ok=True)
 
@@ -72,11 +72,26 @@ for ratio in [10,20,50,100]:
                 [74]    #path
             ]
 
+            #MISSALIGNED
+            bundle_pokemon_110=[
+                [14],        #land
+                [8],  #water
+                [41],         #path
+                [107,118]    #house
+            ]
+
             bundle_pokemon_114=[
                 [130,51,57],        #land
                 [46],  #water
                 [71,97],         #path
                 [29,28,39,40,123,128]    #house
+            ]
+
+            bundle_pokemon_123=[
+                [6],  #land
+                [3],  #water
+                [82,87],  #path
+                [34,50]   #house
             ]
 
             bundle_colors_in_cppn = [
@@ -86,7 +101,7 @@ for ratio in [10,20,50,100]:
                 [ 211, 26,  26]  #city
             ]
 
-            bundle = bundle_pokemon_114
+            bundle = bundle_pokemon_110
 
 
             default_weight = 1.0
@@ -100,7 +115,7 @@ for ratio in [10,20,50,100]:
 
             #%% Settings for visualize wfc
             input_file = "output.txt"
-            output_file = f"output_pokemon_w{ratio}_{inp_img}_{x}.png"
+            output_file = f"output_{output_name}_w{ratio}_{inp_img}_{x}.png"
             SHOW_NUKES = False
             
             def gaussian_(z): 
