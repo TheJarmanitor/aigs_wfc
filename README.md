@@ -1,3 +1,10 @@
+
+Tested with python 3.11
+
+install dependencies with ```pip install -r requirements.txt```.
+CPU version defined by default. If GPU is to be used, install with ```pip install -U "jax[cuda12]"```
+
+
 How to run current pipeline:
 1. Be in ...\aigs_wfc\ folder
 2. command: 'py run.py'

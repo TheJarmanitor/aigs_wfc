@@ -1,5 +1,4 @@
 import numpy as np
-from PIL import Image
 import hashlib
 
 
@@ -16,17 +15,15 @@ def hash_grid(grid, tile_size, return_dict=False):
     for i in range(0, W, tile_size):
         for j in range(0, H, tile_size):
             tile = grid[
-                i:i+tile_size,
-                j:j+tile_size,
+                i : i + tile_size,
+                j : j + tile_size,
             ]
             hash = get_hash(tile)
-            hashed_grid[i//tile_size, j//tile_size] = hash
+            hashed_grid[i // tile_size, j // tile_size] = hash
             hash_dict[hash] = tile
     if return_dict:
         return hashed_grid, hash_dict
     return hashed_grid
-
-
 
 
 def label_grids(grids, hash_dict=None):
@@ -47,7 +44,6 @@ def label_grids(grids, hash_dict=None):
             label_dict = dict(zip(unique_labels, [hash_dict[x] for x in unique_values]))
             return label_grids, unique_labels, label_dict
     return label_grids, unique_labels
-
 
 
 # def get_proportions(grid, unique_labels):
