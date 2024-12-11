@@ -87,6 +87,7 @@ def visualize_labeled(
         node_sizes = [n["size"] for n in G.nodes.values()]
         node_colors = [n["color"] for n in G.nodes.values()]
 
+        plt.clf()
         nx.draw(
             G,
             pos=rotated_pos,

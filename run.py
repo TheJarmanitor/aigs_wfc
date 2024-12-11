@@ -21,9 +21,9 @@ from typing import List
 from tensorneat import algorithm, genome, common
 from tools import image_hashing, rule_split, visualize_labeled, visualize_wfc, wfc
 
-for ratio in [10,20,50,100]:
+for ratio in [1_000_000]:
     for inp_img in range(1,2): #input images example 1
-        input_grid = np.array(Image.open(f"images/piskel_example1.png.png"))[..., :3] 
+        input_grid = np.array(Image.open(f"images/piskel_example8.png"))[..., :3] 
         for x in range(1,3):
             start = time.time()
 
@@ -38,20 +38,20 @@ for ratio in [10,20,50,100]:
             #           if file.startswith(('piskel_'))]
 
             #setting for cppn
-            pop_size = 400
+            pop_size = 666
             species_size = 20
             survival_threshold = 0.1 
-            generation_limit = 40
+            generation_limit = 400
             fitness_target = -1e-3
-            seed = ratio*100 + x
+            seed = ratio*1000 + x + 1
             tile_size_cppn = 1
             show_network = True
             cppn_grid_size = (12,12)
             #%% Settings for rule split wfc
 
-            path_to_input_image = ".\images\pokemon_sootopolis.png"
+            path_to_input_image = ".\images\dragonwarr_island.png"
             tile_size = 16
-            output_name = "pokemonsoot"
+            output_name = "dragon"
 
             os.makedirs(f"outputs/{output_name}", exist_ok=True)
 
@@ -66,10 +66,10 @@ for ratio in [10,20,50,100]:
             ]
 
             bundle_pokemon_103=[
-                [19,20],        #land
+                [19,20,28,29,30,34,35,36],        #land
                 [3],  #water
-                [0,1,11,12],         #forest
-                [74]    #path
+                [0,1,11,12,13,14,27],         #forest
+                [68,69,70,72,73,74,75]    #path
             ]
 
             #MISSALIGNED
@@ -101,7 +101,7 @@ for ratio in [10,20,50,100]:
                 [ 211, 26,  26]  #city
             ]
 
-            bundle = bundle_pokemon_110
+            bundle = bundle_dragon_warr
 
 
             default_weight = 1.0
@@ -111,7 +111,7 @@ for ratio in [10,20,50,100]:
             path_folder = output_name
 
             #output size pixels
-            size = 64
+            size = 40
 
             #%% Settings for visualize wfc
             input_file = "output.txt"
@@ -125,7 +125,8 @@ for ratio in [10,20,50,100]:
                 "SGM": common.ACT.sigmoid, 
                 "TNH": common.ACT.tanh, 
                 "SIN": common.ACT.sin, 
-                "GSS": gaussian_
+                "GSS": gaussian_,
+                "RLU": common.ACT.relu
             }
 
             activation_labels = list(activation_functions_dict.keys())
@@ -134,10 +135,10 @@ for ratio in [10,20,50,100]:
             #%% Execute cppn neat
 
             result_cppn_neat, label_tile_dict = grid_problem.cppn_neat(input_grid = input_grid, pop_size = pop_size, species_size= species_size
-                                            , survival_threshold=survival_threshold, activation_functions = activation_functions, generation_limit = generation_limit
+                                            , survival_threshold=survival_threshold, activation_functions = activation_functions, generation_limit = generation_limit if ratio != 1 else 1
                                             , fitness_target = fitness_target, seed = seed, tile_size = tile_size_cppn
                                             , show_network = show_network, activation_labels= activation_labels, grid_size=cppn_grid_size
-                                            , visualize_output_path = None
+                                            , visualize_output_path = f"outputs/{output_name}/cppn_{output_file}"
                                             )
 
             print(f"Result: \n{result_cppn_neat.reshape(cppn_grid_size)}")

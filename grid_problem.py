@@ -214,7 +214,8 @@ def cppn_neat(input_grid: np.array, pop_size: int = 1000, species_size: int = 20
 
     if show_network:
         network = network_dict(algo.genome, state, *best)
-        visualize_labeled(algo.genome,network,activation_labels, rotate=90, save_path="network.svg", with_labels=True)
+        save_path = "network.svg" if visualize_output_path is None else visualize_output_path.replace(".png", "_network.svg")
+        visualize_labeled(algo.genome,network,activation_labels, rotate=90, save_path=save_path, with_labels=True)
 
     algo_forward = vmap(algo.forward,in_axes=(None,None,0))(state, algo.transform(state, best), problem.inputs)
     result = np.argmax(algo_forward, axis=1)
