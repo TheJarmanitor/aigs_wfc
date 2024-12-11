@@ -68,6 +68,7 @@ class TileProperties(FuncFit):
 
         self.target = self.extract_metrics(self.output_data, len(unique_labels), custom_shape=grid.shape)
 
+    # 'fitness function' checks for differences on output vector of this function
     def extract_metrics(self, image, colors, custom_shape=None):
         if image.shape[1] == colors:
             image = jnp.argmax(image, axis=1)
@@ -179,6 +180,22 @@ def cppn_neat(input_grid: np.array, pop_size: int = 1000, species_size: int = 20
               , survival_threshold: float = 0.1, activation_functions: list = [common.ACT.sigmoid], generation_limit: int = 200
               , fitness_target: float = -1e-6, seed: int= 42, tile_size: int = 16, show_network: bool = False, activation_labels: list = ["SGM"]
               , visualize_output_path: str = None):
+    '''
+    Runs a CPPN-NEAT pipeline to generate a grid of colors
+    :param input_grid: np.array, input grid to be used for the problem, generations will try to mimic this
+    :param pop_size: int, population size for the NEAT algorithm
+    :param species_size: int, size of species for the NEAT algorithm
+    :param grid_size: tuple, desired size of the output grid
+    :param survival_threshold: float, threshold for survival of species (used by NEAT algorithm)
+    :param activation_functions: list, list of possible activation functions to be used by the NEAT algorithm
+    :param generation_limit: int, maximum number of generations to run the NEAT algorithm
+    :param fitness_target: float, NEAT stops execution earlier if the fitness reaches this value
+    :param seed: int, random seed for NEAT algorithm
+    :param tile_size: int, size of the tiles on the input grid
+    :param show_network: bool, if True, generates a svg file with the network
+    :param activation_labels: list, list of labels for the activation functions used in show_network
+    :param visualize_output_path: str, path to save the output grid as image
+    '''
 
     algo = algorithm.NEAT(
         pop_size=pop_size,  # Population size
@@ -234,15 +251,3 @@ def cppn_neat(input_grid: np.array, pop_size: int = 1000, species_size: int = 20
         visualize_output_grid(result.reshape(grid_size), input_grid, tile_size, visualize_output_path, 10)
 
     return result, problem.label_tile_dict
-
-if __name__ == "__main__":
-    input_image = np.array(Image.open("images\piskel_example1.png.png"))[..., :3]
-
-    result = cppn_neat(input_image, pop_size=500, species_size=20, survival_threshold=0.1, generation_limit=1000, fitness_target=-5e-4, seed=123, show_network=False)
-    result = result.reshape(input_image.shape[:2])
-    print(result)
-
-    tp = TileProperties(input_image, tile_size=1)
-    print(tp.extract_metrics(tp.output_data, len(tp.unique_labels)))
-    print("--------")
-    print(tp.extract_metrics(result, len(tp.unique_labels)))

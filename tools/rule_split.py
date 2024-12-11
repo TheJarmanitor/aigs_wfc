@@ -1,6 +1,5 @@
 # Creates a WFC rule set from an input image
 
-
 from typing import List
 import numpy as np
 from PIL import Image
@@ -26,20 +25,13 @@ class Color:
     def __eq__(self, other: 'Color'):
         return self.hash == other.hash
 
-
-        
-        
-
-
 class RuleSet:
     class Tile:
         def __init__(self, tile: List[Color], id):
             self.id = id
             self.tile = tile
-            self.symmetry = -1 # unused for now
             self.rules = [set() for _ in range(4)]
         def same_as(self, tile) -> bool:
-            # TODO: check for symmetry
             return all(a == b for a, b in zip(self.tile, tile))
     
     def __init__(self, image: List[List[Color]], tile_size: int):
@@ -59,14 +51,12 @@ class RuleSet:
         for y in range(len(self.image_id)):
             for x in range(len(self.image_id[0]) - 1):
                 self.tiles[self.image_id[y][x]].rules[Direction.RIGHT].add(self.image_id[y][x + 1])
-                # due to symmetry we can ignore the opposite direction
                 self.tiles[self.image_id[y][x + 1]].rules[Direction.LEFT].add(self.image_id[y][x])
 
         # add vertical rules
         for y in range(len(self.image_id) - 1):
             for x in range(len(self.image_id[0])):
                 self.tiles[self.image_id[y + 1][x]].rules[Direction.UP].add(self.image_id[y][x])
-                # due to symmetry we can ignore the opposite direction
                 self.tiles[self.image_id[y][x]].rules[Direction.DOWN].add(self.image_id[y + 1][x])
         
     
@@ -80,6 +70,8 @@ class RuleSet:
         self.image_id[y // self.tile_size][x // self.tile_size] = self.id_counter
         self.id_counter += 1
     
+
+    # this is generic wfcrules format
     def output_to_folder_xml(self, name: str):
         # get /outputs/ folder
         output_dir = os.path.join(os.getcwd(), "outputs")
@@ -110,6 +102,7 @@ class RuleSet:
             f.write("  </neighbors>\n")
             f.write("</set>\n")
     
+    # this is our custom format
     def output_to_folder_rules(self, name: str):
         # get /outputs/ folder
         output_dir = os.path.join(os.getcwd(), "outputs")
@@ -146,10 +139,10 @@ if __name__ == "__main__":
     tile_size = int(argv[2])
     rules = RuleSet([list(map(lambda x: Color(x[0], x[1], x[2]), row)) for row in img], tile_size)
     print(f"Created {rules.id_counter} tiles")
-    # pinrt id map
+    # #pinrt id map
     # for row in rules.image_id:
       #  print(row)
-    # print rules
+    # #print rules
     # for t in rules.tiles:
     #    print(f"Tile {t.id}")
     #    for i, r in enumerate(t.rules):

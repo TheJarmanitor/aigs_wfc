@@ -2,7 +2,7 @@ from tools.image_hashing import hash_grid, label_grids
 import numpy as np
 import matplotlib.image as mpimg
 
-
+# Visualize the output of a CPPN as a png image with colored pixels
 def visualize_output_grid(cppn_output, input_grid, tile_size, path, pixel_size=1):
    W, H = cppn_output.shape
    cppn_output = cppn_output.reshape(-1)

@@ -2,6 +2,7 @@ import numpy as np
 import sys
 import matplotlib.image as mpimg
 
+# Render output of WFC as an image
 def visualize_wfc(path_folder = "test", input_file = "output.txt", output_file = "output.png", SHOW_NUKES = True):
     
     path_to_rule_folder = f"outputs/{path_folder}/"

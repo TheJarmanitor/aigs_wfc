@@ -8,6 +8,8 @@ def network_dict(genome, state, nodes, conns):
     network["nodes_data"] = nodes
     return network  
 
+# Visualize the network of a genome with colored nodes, edges and activation function labels
+# repurposed code from visualize method in https://github.com/EMI-Group/tensorneat/blob/main/src/tensorneat/genome/default.py
 def visualize_labeled(
         genome,
         network,
