@@ -202,7 +202,7 @@ def cppn_neat(input_grid: np.array, pop_size: int = 1000, species_size: int = 20
         species_size=species_size,  # Size of species
         survival_threshold=survival_threshold,  # Threshold for survival
         genome=genome.DefaultGenome(
-            num_inputs=2,  # Normalized Pixel Coordinates and Number of input features (RGB values)
+            num_inputs=2,  # Normalized Pixel Coordinates
             num_outputs=4,  # Number of output categories (Red, Brown, Green, Blue)
             #output_transform=common.ACT.sigmoid,  # Activation function for output layer
             node_gene=genome.DefaultNode(

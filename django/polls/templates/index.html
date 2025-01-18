@@ -1,0 +1,124 @@
+{% load static %}
+<link rel="stylesheet" href="{% static 'assets/style.css' %}">
+<style>
+body {
+    background-image: url("{% static 'assets/drog.png' %}");
+    background-color: rgba(255,255,255,0.8);
+    background-size: cover;
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+    background-blend-mode: overlay;
+}
+</Style>
+<div class="main-container">
+    <h1>CPPN-NEAT2WFC</h1>
+    <div id="image-container" class="grid-container">
+        {% for i in n %}
+        <img src="{% static 'assets/generated/img_' %}{{i}}.png" id="image-{{i}}" data-id={{i}} class="clickable-image" alt="Django image" onclick="toggleImageSelection(this)">
+        {% endfor %}
+    </div>
+    <div class="button-container">
+        <button onclick="sendSelectedImages()">Mutate</button>
+        <button onclick="downloadSelected()">Save selected images</button>
+        <button style="margin-left: 2em; background:#c05555;" onclick="reloadPage()">Restart</button>
+    </div>
+</div>
+
+<script>
+    // Array to hold selected image IDs
+    let selectedImages = [];
+    let allImages = {{ n|safe }};
+    const maxSelectedImages = 4;  // Maximum number of images that can be selected
+
+    // Function to toggle selection of an image
+    function toggleImageSelection(imageElement) {
+        const imageId = imageElement.getAttribute('data-id');
+
+        if (selectedImages.includes(imageId)) {
+            // Deselect the image (remove from selected images array)
+            selectedImages = selectedImages.filter(id => id !== imageId);
+            imageElement.classList.remove('selected');
+        } else {
+            // Select the image (add to selected images array)
+            selectedImages.push(imageId);
+            imageElement.classList.add('selected');
+            if (selectedImages.length > maxSelectedImages) {
+                const idToRemove = selectedImages.shift();
+                const imageToRemove = document.getElementById('image-' + idToRemove);
+                imageToRemove.classList.remove('selected');
+            }
+            
+        }
+    }
+
+    // Function to send the selected images to the server
+    function sendSelectedImages() {
+        if (selectedImages.length === 0) {
+            alert('Please select at least one image.');
+            return;
+        }
+
+        // Send the selected images using AJAX (or fetch)
+        const csrftoken = '{{ csrf_token }}';
+
+        fetch("{% url 'polls:process_images' %}", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrftoken  // Django's CSRF protection
+            },
+            body: JSON.stringify({ selected_images: selectedImages, all_images: allImages })  // Send the selected and all images
+        })
+        .then(response => response.json())
+        .then(data => {
+            // Dynamically update the images with the new ones
+            updateImages(data.new_images);
+        })
+        .catch(error => {
+            console.error('Error:', error);
+        });
+    }
+
+    function updateImages(newImages) {
+        const imageContainer = document.getElementById('image-container');
+        imageContainer.innerHTML = '';  // Clear old images
+        // write msg to console
+        console.log("proc");
+        
+        // Add new images dynamically
+        newImages.forEach((index) => {
+            const img = document.createElement('img');
+            img.src = "{% static 'assets/generated/img_' %}"+index+".png";
+            img.alt = 'Generated Image ' + (index);
+            img.classList.add('image');
+            img.id = 'image-' + (index);
+            img.setAttribute('data-id', index);
+            img.onclick = function() { toggleImageSelection(img) };  // Bind the click event
+            
+            imageContainer.appendChild(img);
+        });
+        
+        allImages = newImages;
+        selectedImages = [];
+    }
+
+    function reloadPage(){
+        location.reload();
+    }
+
+    function downloadSelected(){
+        // Download images
+        const selectedImages = document.querySelectorAll('.selected');
+        selectedImages.forEach((img) => {
+            const imageId = img.getAttribute('data-id');
+            const imageUrl = img.src;
+            const link = document.createElement('a');
+            link.href = imageUrl;
+            link.download = 'image_' + imageId + '.png';
+            link.click();
+        });
+
+        
+    }
+    
+</script>
