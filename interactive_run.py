@@ -8,6 +8,7 @@ from tensorneat import genome, common
 import jax
 from jax import vmap, numpy as jnp, jit
 import numpy as np
+import matplotlib.pyplot as plt
 
 # %%
 
@@ -20,16 +21,14 @@ test_genome = genome.DefaultGenome(
 )
 
 algo = InteractiveNEAT(
-    pop_size=1,
+    pop_size=9,
     genome=test_genome,
 )
 
 problem = InteractiveGrid(grid_size=(16, 16))
+grid = plt.imread("images/cppn_inputs/piskel_example1.png")
 
-pipeline = InteractivePipeline(
-    algorithm=algo,
-    problem=problem,
-)
+pipeline = InteractivePipeline(algorithm=algo, problem=problem, input_grid=grid)
 # %%
 print(test_genome.input_idx)
 
@@ -37,10 +36,14 @@ print(test_genome.input_idx)
 state = pipeline.setup()
 state, population = pipeline.step(state)
 # i guess its just expects the data in a weird layer of abstraction of vmaps and batches
-def evaluate(state, act_func, population):
-    predict = vmap(act_func, in_axes=(None, None, 0))(state, population, problem.inputs)
-    return predict
-predict = vmap(evaluate,in_axes=(None,None,0))(state, algo.forward, population)
-print("Ran without error")
 
-    
+predict = vmap(problem.evaluate, in_axes=(None, None, 0))(
+    state, algo.forward, population
+)
+
+labeled_predicts = jnp.argmax(predict, axis=2)
+print(labeled_predicts.shape)
+# %%
+
+
+pipeline.visualize_population(labeled_predicts, grid, tile_size=1)

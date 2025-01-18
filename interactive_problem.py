@@ -26,6 +26,12 @@ class InteractiveGrid(BaseProblem):
     def setup(self, state: State = State()):
         return state
 
+    def evaluate(self, state, act_func, population):
+        predict = vmap(act_func, in_axes=(None, None, 0))(
+            state, population, self.inputs
+        )
+        return predict
+
     def _prepare_data(self):
         grid_info_list = []
         width, height = self.grid_size

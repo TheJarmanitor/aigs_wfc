@@ -2,6 +2,7 @@ import json
 import os
 
 import jax, jax.numpy as jnp
+from jax import vmap
 import datetime, time
 import numpy as np
 
@@ -9,18 +10,24 @@ from interactive_NEAT import InteractiveNEAT
 from interactive_problem import InteractiveGrid
 from tensorneat.common import State, StatefulBaseClass
 
+from tools.image_hashing import hash_grid, label_grids
+import matplotlib.image as mpimg
+import matplotlib.pyplot as plt
+
 
 class InteractivePipeline(StatefulBaseClass):
     def __init__(
         self,
         algorithm: InteractiveNEAT,
         problem: InteractiveGrid,
+        input_grid,
         seed: int = 42,
         is_save: bool = False,
         save_dir=None,
     ):
         self.algorithm = algorithm
         self.problem = problem
+        self.input_grid = input_grid
         self.seed = seed
         self.pop_size = self.algorithm.pop_size
 
@@ -50,4 +57,38 @@ class InteractivePipeline(StatefulBaseClass):
             state, pop
         )
 
-        return state, pop_transformed
+        predict = vmap(self.problem.evaluate, in_axes=(None, None, 0))(
+            state, self.algorithm.forward, pop_transformed
+        )
+
+        labeled_predicts = jnp.argmax(predict, axis=2)
+        self.visualize_population(labeled_predicts, self.input_grid, 1)
+        selected_indices = self.algorithm.select_winners()
+
+        state = self.algorithm.tell(state, selected_indices)
+
+        return state.update(randkey=randkey), predict
+
+    def visualize_population(self, population, input_grid, tile_size, pixel_size=1):
+        W, H = self.problem.grid_size
+        population = population.reshape(-1)
+        population = np.array(population)
+        hashed_grid, hash_dict = hash_grid(input_grid, tile_size, return_dict=True)
+        _, _, label_to_tile = label_grids(hashed_grid, hash_dict)
+        new_grid = np.array([label_to_tile[x] for x in population])[
+            :, :, :, :-1
+        ].reshape(-1, W, H, 3)
+        img = np.zeros(
+            (self.pop_size, H * pixel_size, W * pixel_size, 3), dtype=np.uint8
+        )
+        fig, axes = plt.subplots(1, self.pop_size)
+
+        for p in range(self.pop_size):
+            for y in range(H):
+                for x in range(W):
+                    img[
+                        p,
+                        y * pixel_size : (y + 1) * pixel_size,
+                        x * pixel_size : (x + 1) * pixel_size,
+                    ] = new_grid[p, y, x]
+            axes[p].imshow(new_grid[p])
