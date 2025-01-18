@@ -6,7 +6,7 @@ from interactive_pipeline import InteractivePipeline
 from tensorneat import genome, common
 
 import jax
-from jax import vmap, numpy as jnp
+from jax import vmap, numpy as jnp, jit
 import numpy as np
 
 # %%
@@ -34,9 +34,13 @@ pipeline = InteractivePipeline(
 print(test_genome.input_idx)
 
 # %%
-
 state = pipeline.setup()
 state, population = pipeline.step(state)
-print(population[1])
-# predict = algo.forward(state, population, problem.inputs[0])
-# predict = vmap(algo.forward, in_axes=(None, None, 0))(state, population, problem.inputs)
+# i guess its just expects the data in a weird layer of abstraction of vmaps and batches
+def evaluate(state, act_func, population):
+    predict = vmap(act_func, in_axes=(None, None, 0))(state, population, problem.inputs)
+    return predict
+predict = vmap(evaluate,in_axes=(None,None,0))(state, algo.forward, population)
+print("Ran without error")
+
+    

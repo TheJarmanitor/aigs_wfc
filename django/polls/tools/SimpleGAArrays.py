@@ -10,11 +10,14 @@ def GenerateNewPopulation(parents, population_size, mutation_rate, mutation_powe
         population.extend(parents)
 
     while len(population) < population_size:
-        rng, key, key2 = random.split(rng,3)
-        parent = random.choice(key, jnp.array(parents))
-        print(parent)
-        offspring = mutateFromParent(parent, mutation_rate, mutation_power, key2)
-        print(offspring)
+        rng, key, key2, key3 = random.split(rng,4)
+        if len(parents) == 1 or random.uniform(key3) < 0.5:
+            parent = random.choice(key, jnp.array(parents))
+            offspring = mutateFromParent(parent, mutation_rate, mutation_power, key2)
+        else:
+            parent1, parent2 = random.choice(key, jnp.array(parents), shape=(2,), replace=False)
+            offspring = crossover(parent1, parent2, key2)
+        #TODO: hash
         if treshold_func is not None and not treshold_func(offspring,population):
             continue
         population.append(offspring)
@@ -34,6 +37,26 @@ def mutateFromParent(parent, mutation_rate, mutation_power, rng):
     rngs = random.split(rng, offspring.shape[0])
     offspring = vmap(_mutateElement,(0,None,None,0),0)(offspring, mutation_rate, mutation_power, rngs)
     return offspring.reshape(parent.shape)
+
+@jit
+def crossover(parent1, parent2, rng):
+    keys = random.split(rng, 10)
+    a,b = 5. * (random.uniform(keys[0]) - 0.5), 2. * (random.uniform(keys[1]) - 0.5)
+    def getval(x,y):
+        return y < a*x + b
+    getvaljitted = jit(getval)
+    height, width, channels = parent1.shape
+
+    x_coords = jnp.linspace(-1, 1, width)
+    y_coords = jnp.linspace(-1, 1, height)
+
+    X, Y = jnp.meshgrid(x_coords, y_coords)
+
+    mask = getvaljitted(X, Y)
+    mask = jnp.expand_dims(mask, axis=-1).repeat(channels, axis=-1)
+
+    return jnp.where(mask, parent1, parent2)
+
 
 
 
