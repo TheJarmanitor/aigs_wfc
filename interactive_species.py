@@ -1,10 +1,13 @@
-from tensorneat.algorithm import SpeciesController
-import numpy as np
 import jax
 import jax.numpy as jnp
 
+from tensorneat.common import (
+    State,
+    StatefulBaseClass,
+)
 
-class InteractiveSpeciesController(SpeciesController):
+
+class InteractiveSpeciesController(StatefulBaseClass):
     def __init__(self, pop_size) -> None:
         self.pop_size = pop_size
 
