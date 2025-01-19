@@ -34,18 +34,5 @@ print(test_genome.input_idx)
 
 # %%
 state = pipeline.setup()
-state, population = pipeline.step(state)
-# i guess its just expects the data in a weird layer of abstraction of vmaps and batches
-
-#pop_transformed = vmap(algo.transform, in_axes=(None, 0))(state, population)
-#
-#predict = vmap(problem.evaluate, in_axes=(None, None, 0))(
-#    state, algo.forward, pop_transformed
-#)
-#
-#labeled_predicts = jnp.argmax(predict, axis=2)
-#print(labeled_predicts.shape)
-## %%
-#
-#
-#pipeline.visualize_population(labeled_predicts, grid, tile_size=1)
+for _ in range(2):
+    state, population = pipeline.step(state)

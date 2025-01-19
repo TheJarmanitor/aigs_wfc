@@ -52,6 +52,7 @@ class InteractiveNEAT(BaseAlgorithm):
         state, winner, loser, elite_mask = self.species_controller.update_species(
             state, selected_indices
         )
+        print(winner, loser, elite_mask)
 
         state = self._create_next_generation(state, winner, loser, elite_mask)
 
@@ -75,37 +76,21 @@ class InteractiveNEAT(BaseAlgorithm):
     def _create_next_generation(self, state, winner, loser, elite_mask):
 
         min_size = min(len(winner), len(loser))
+        print(len(winner), len(loser))
         # find next node key for mutation
         all_nodes_keys = state.pop_nodes[:, :, 0]
         max_node_key = jnp.max(
             all_nodes_keys, where=~jnp.isnan(all_nodes_keys), initial=0
         )
         next_node_key = max_node_key + 1
-        new_node_keys = jnp.arange(min_size) + next_node_key
+        new_node_keys = jnp.arange(self.pop_size) + next_node_key
 
-        # find next conn historical markers for mutation if needed
-        if "historical_marker" in self.genome.conn_gene.fixed_attrs:
-            all_conns_markers = vmap(
-                self.genome.conn_gene.get_historical_marker, in_axes=(None, 0)
-            )(state, state.pop_conns)
-
-            max_conn_markers = jnp.max(
-                all_conns_markers, where=~jnp.isnan(all_conns_markers), initial=0
-            )
-            next_conn_markers = max_conn_markers + 1
-            new_conn_markers = (
-                jnp.arange(self.pop_size * 3).reshape(self.pop_size, 3)
-                + next_conn_markers
-            )
-        else:
-            # no need to generate new conn historical markers
-            # use 0
-            new_conn_markers = jnp.full((min_size, 3), 0)
+        new_conn_markers = jnp.full((self.pop_size, 3), 0)
 
         # prepare random keys
         k1, k2, randkey = jax.random.split(state.randkey, 3)
-        crossover_randkeys = jax.random.split(k1, min_size)
-        mutate_randkeys = jax.random.split(k2, min_size)
+        crossover_randkeys = jax.random.split(k1, self.pop_size)
+        mutate_randkeys = jax.random.split(k2, self.pop_size)
 
         wpn, wpc = state.pop_nodes[winner], state.pop_conns[winner]
         lpn, lpc = state.pop_nodes[loser], state.pop_conns[loser]
@@ -118,13 +103,6 @@ class InteractiveNEAT(BaseAlgorithm):
         )  # new_nodes, new_conns
 
         # batch mutation
-        print(
-            mutate_randkeys.shape,
-            n_nodes.shape,
-            n_conns.shape,
-            new_node_keys.shape,
-            new_conn_markers.shape,
-        )
         m_n_nodes, m_n_conns = vmap(
             self.genome.execute_mutation, in_axes=(None, 0, 0, 0, 0)
         )(
@@ -134,6 +112,9 @@ class InteractiveNEAT(BaseAlgorithm):
         # elitism don't mutate
         pop_nodes = jnp.where(elite_mask[:, None, None], n_nodes, m_n_nodes)
         pop_conns = jnp.where(elite_mask[:, None, None], n_conns, m_n_conns)
+        print(
+            pop_nodes.shape,
+        )
 
         return state.update(
             randkey=randkey,
