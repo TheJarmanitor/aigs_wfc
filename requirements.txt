@@ -3,5 +3,6 @@ numpy>=1.26.4
 matplotlib >=3.9.2
 networkx>=3.4.2
 django>=5.1
-gunicorn
+gunicorn>=23.0.0
+whitenoise>=6.8.2
 tensorneat @ git+https://github.com/EMI-Group/tensorneat.git
