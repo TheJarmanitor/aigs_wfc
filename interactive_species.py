@@ -78,7 +78,10 @@ class InteractiveSpeciesController(StatefulBaseClass):
         part2 = jnp.where(~is_part1_win, fas, mas)
 
         # Determine the elite mask (individuals in selected_indices are elites)
-        elite_mask = jnp.isin(jnp.arange(self.pop_size), selected_indices)
+        #elite_mask = jnp.isin(jnp.arange(self.pop_size), selected_indices)
+        elite_mask = elites
+
+        print(part1.shape, elite_mask.shape)
 
         return part1, part2, elite_mask
 
