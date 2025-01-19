@@ -10,6 +10,7 @@ from django.utils import timezone
 import json
 import random
 import time
+import os
 
 from .models import Layout
 
@@ -82,6 +83,13 @@ def process_images(request):
                 new_ids.append(id)
             else:
                 new_ids.append(str(offsprings_ids.pop(0)))
+
+        
+        # remove old layouts
+        delete_ids = [id for id in all_ids if id not in new_ids and int(id) > 9]
+        Layout.objects.filter(id__in=delete_ids).delete()
+        for id in delete_ids:
+            os.remove(f"static/assets/generated/img_{id}.png")
 
 
 
