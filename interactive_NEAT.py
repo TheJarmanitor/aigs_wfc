@@ -119,7 +119,6 @@ class InteractiveNEAT(BaseAlgorithm):
 
         # batch mutation
         print(
-            state[0].shape,
             mutate_randkeys.shape,
             n_nodes.shape,
             n_conns.shape,
