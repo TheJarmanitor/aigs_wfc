@@ -633,13 +633,13 @@ $RECYCLE.BIN/
 # Frank folder
 untracked/
 outputs/
-django/static/assets/generated/*
-!django/static/assets/generated/img_4.png
-!django/static/assets/generated/img_5.png
-!django/static/assets/generated/img_6.png
-!django/static/assets/generated/img_7.png
-!django/static/assets/generated/img_8.png
-!django/static/assets/generated/img_9.png
-!django/static/assets/generated/img_10.png
-!django/static/assets/generated/img_11.png
-!django/static/assets/generated/img_12.png
+static/assets/generated/*
+!static/assets/generated/img_4.png
+!static/assets/generated/img_5.png
+!static/assets/generated/img_6.png
+!static/assets/generated/img_7.png
+!static/assets/generated/img_8.png
+!static/assets/generated/img_9.png
+!static/assets/generated/img_10.png
+!static/assets/generated/img_11.png
+!static/assets/generated/img_12.png
