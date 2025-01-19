@@ -2,4 +2,5 @@ jax>=0.4.31
 numpy>=1.26.4
 matplotlib >=3.9.2
 networkx>=3.4.2
+django>=5.1
 tensorneat @ git+https://github.com/EMI-Group/tensorneat.git
