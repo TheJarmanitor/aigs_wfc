@@ -13,23 +13,29 @@ import time
 
 from .models import Layout
 
+from .tools.SGAA_test import init_population
+
 from polls.tools.SimpleGAArrays import GenerateNewPopulation
 from polls.tools.SGAA_test import differentTest, imgFromArray
 
 
-class IndexView(generic.ListView):
+def IndexView(request):
     template_name = "index.html"
     images = 9
-    n = list(map(str,range(4,13)))
+    n = list(map(str,range(1,10)))
+    context = { 'images': images, 'n': n }
 
-    def get_queryset(self):
-        return Layout.objects.order_by('-pub_date')[:self.images]
+    # check if default exists
+    a = Layout.objects.filter(id__in=n).values_list('data', flat=True)
+    if(len(a) < 9):
+        for offspring in init_population():
+            layout = Layout(data=json.dumps(offspring.tolist()), pub_date=timezone.now())
+            layout.save()
+            img_path = imgFromArray(offspring, f"static/assets/generated/img_{layout.id}.png")
+            layout.img_path = img_path
+            layout.save()
 
-    
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context["n"] = self.n
-        return context
+    return render(request, template_name, context)
 
 def process_images(request):
     if request.method == 'POST':
