@@ -47,9 +47,7 @@ class InteractivePipeline(StatefulBaseClass):
         print("initializing finished")
         return state
 
-    def step(self, state):
-        randkey_, randkey = jax.random.split(state.randkey)
-        keys = jax.random.split(randkey_, self.pop_size)
+    def generate(self, state):
 
         pop = self.algorithm.ask(state)
 
@@ -60,15 +58,12 @@ class InteractivePipeline(StatefulBaseClass):
         predict = vmap(self.problem.evaluate, in_axes=(None, None, 0))(
             state, self.algorithm.forward, pop_transformed
         )
+        return predict
 
-
-        return state.update(randkey=randkey), predict
-
-    def evole(self, state, selected_indices):
+    def evolve(self, state, selected_indices):
         state = self.algorithm.tell(state, selected_indices)
 
         return state
-
 
     def visualize_population(
         self, predict, tile_size=1, pixel_size=1, save_path=None, file_name="output_pop"

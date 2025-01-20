@@ -36,7 +36,7 @@ state = pipeline.setup()
 
 # %%
 while True:
-    state, population = pipeline.step(state)
+    state, population = pipeline.generate(state)
     pipeline.visualize_population(population, save_path="outputs/population/")
     selected_indices = algo.select_winners()
-    state = pipeline.evole(state, selected_indices)
+    state = pipeline.evolve(state, selected_indices)
