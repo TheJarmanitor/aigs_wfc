@@ -10,8 +10,10 @@ from jax import vmap, numpy as jnp, jit
 import numpy as np
 import matplotlib.pyplot as plt
 
-# %%
+import time
 
+# %%
+stopwatch = time.time()
 test_genome = genome.DefaultGenome(
     num_inputs=2,
     num_outputs=4,

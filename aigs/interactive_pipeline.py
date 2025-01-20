@@ -2,7 +2,7 @@ import json
 import os
 
 import jax, jax.numpy as jnp
-from jax import vmap
+from jax import vmap, jit
 import datetime, time
 import numpy as np
 

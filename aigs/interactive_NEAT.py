@@ -1,7 +1,7 @@
 from typing import Callable
 
 import jax
-from jax import vmap, numpy as jnp
+from jax import vmap, numpy as jnp, jit
 import numpy as np
 
 from tensorneat.algorithm import BaseAlgorithm
