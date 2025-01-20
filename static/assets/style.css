@@ -9,7 +9,9 @@ h1 {
 
 img {
     border: 6px solid transparent;
-    width: 100px;
+    min-height: 100px;
+    min-height: 100px;
+    object-fit: cover;
 }
 
 img:hover {

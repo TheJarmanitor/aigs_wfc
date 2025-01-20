@@ -80,27 +80,37 @@ body {
     }
 
     function updateImages(newImages) {
-        const imageContainer = document.getElementById('image-container');
-        imageContainer.innerHTML = '';  // Clear old images
-        // write msg to console
-        console.log("proc");
+    const imageContainer = document.getElementById('image-container');
+    imageContainer.innerHTML = '';  // Clear old images
+    
+    // Set fixed dimensions to avoid squishing
+    const placeholderWidth = 100;  // Adjust according to your image size
+    const placeholderHeight = 100; // Adjust according to your image size
+    
+    // Add new images dynamically
+    newImages.forEach((index) => {
+        const img = document.createElement('img');
+        img.src = "{% static 'assets/generated/img_' %}" + index + ".png";
+        img.alt = 'Generated Image ' + index;
+        img.classList.add('image');
+        img.id = 'image-' + index;
+        img.setAttribute('data-id', index);
+        img.style.width = placeholderWidth + 'px';  // Set the placeholder width
+        img.style.height = placeholderHeight + 'px';  // Set the placeholder height
+        img.onclick = function() { toggleImageSelection(img); };  // Bind the click event
         
-        // Add new images dynamically
-        newImages.forEach((index) => {
-            const img = document.createElement('img');
-            img.src = "{% static 'assets/generated/img_' %}"+index+".png";
-            img.alt = 'Generated Image ' + (index);
-            img.classList.add('image');
-            img.id = 'image-' + (index);
-            img.setAttribute('data-id', index);
-            img.onclick = function() { toggleImageSelection(img) };  // Bind the click event
-            
-            imageContainer.appendChild(img);
-        });
-        
-        allImages = newImages;
-        selectedImages = [];
-    }
+        // Once the image is loaded, adjust its dimensions automatically
+        img.onload = function() {
+            img.style.width = '';  // Remove inline width to allow natural size
+            img.style.height = ''; // Remove inline height to allow natural size
+        };
+
+        imageContainer.appendChild(img);
+    });
+
+    allImages = newImages;
+    selectedImages = [];
+}
 
     function reloadPage(){
         location.reload();
