@@ -30,22 +30,11 @@ grid = plt.imread("images/cppn_inputs/piskel_example1.png")
 
 pipeline = InteractivePipeline(algorithm=algo, problem=problem, input_grid=grid)
 # %%
-print(test_genome.input_idx)
+state = pipeline.setup()
 
 # %%
-state = pipeline.setup()
-state, population = pipeline.step(state)
-# i guess its just expects the data in a weird layer of abstraction of vmaps and batches
-
-#pop_transformed = vmap(algo.transform, in_axes=(None, 0))(state, population)
-#
-#predict = vmap(problem.evaluate, in_axes=(None, None, 0))(
-#    state, algo.forward, pop_transformed
-#)
-#
-#labeled_predicts = jnp.argmax(predict, axis=2)
-#print(labeled_predicts.shape)
-## %%
-#
-#
-#pipeline.visualize_population(labeled_predicts, grid, tile_size=1)
+while True:
+    state, population = pipeline.step(state)
+    pipeline.visualize_population(population, save_path="outputs/population/")
+    selected_indices = algo.select_winners()
+    state = pipeline.evole(state, selected_indices)
