@@ -151,7 +151,7 @@ def _cppn_process_imgs(user_id, parents_ids):
     selected_indices = pipeline.algorithm.select_winners(parents_ids)
     state = pipeline.evolve(state, selected_indices)
 
-    state, population = pipeline.generate(state)
+    population = pipeline.generate(state)
     pipeline.visualize_population(
         population, save_path="static/assets/generated", file_name=f"img_{user_id}"
     )
