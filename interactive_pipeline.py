@@ -62,14 +62,18 @@ class InteractivePipeline(StatefulBaseClass):
         )
 
         labeled_predicts = jnp.argmax(predict, axis=2)
-        self.visualize_population(labeled_predicts, self.input_grid, 1)
+        self.visualize_population(
+            labeled_predicts, self.input_grid, 1, save_path="outputs/population"
+        )
         selected_indices = self.algorithm.select_winners()
 
         state = self.algorithm.tell(state, selected_indices)
 
         return state.update(randkey=randkey), predict
 
-    def visualize_population(self, population, input_grid, tile_size, pixel_size=1):
+    def visualize_population(
+        self, population, input_grid, tile_size, pixel_size=1, save_path=None
+    ):
         W, H = self.problem.grid_size
         population = population.reshape(-1)
         population = np.array(population)
@@ -92,3 +96,5 @@ class InteractivePipeline(StatefulBaseClass):
                         x * pixel_size : (x + 1) * pixel_size,
                     ] = new_grid[p, y, x]
             axes[p].imshow(new_grid[p])
+            if save_path is not None:
+                mpimg.imsave(f"{save_path}/output_pop_{p}.png", new_grid[p])
