@@ -198,7 +198,7 @@ def _get_default_state():
 
     pipeline = _get_pipeline()
     state = pipeline.setup()
-    state, population = pipeline.step(state)
+    population = pipeline.generate(state)
     pipeline.visualize_population(
         population, save_path="static/assets/generated", file_name=f"img_X"
     )
