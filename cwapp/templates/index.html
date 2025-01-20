@@ -14,7 +14,11 @@ body {
     <h1>CPPN-NEAT2WFC:<br><br>{{ version }}</h1>
     <div id="image-container" class="grid-container">
         {% for i in n %}
+        {% if version == "B" %}
         <img src="{% static 'assets/generated/img_' %}{{i}}.png" id="image-{{i}}" data-id={{i}} class="clickable-image" alt="Django image" onclick="toggleImageSelection(this)">
+        {% else %}
+        <img src="{% static 'assets/generated/img_' %}X_{{i}}.png" id="image-{{i}}" data-id={{i}} class="clickable-image" alt="Django image" onclick="toggleImageSelection(this)">
+        {% endif %}
         {% endfor %}
     </div>
     <div class="button-container">
@@ -30,7 +34,7 @@ body {
     let allImages = {{ n|safe }};
     const maxSelectedImages = 4;  // Maximum number of images that can be selected
     const version = "{{ version }}";
-    let user_id = -1;
+    const user_id = {{ user_id }};
 
     // Function to toggle selection of an image
     function toggleImageSelection(imageElement) {
@@ -95,9 +99,8 @@ body {
     const placeholderWidth = 100;  // Adjust according to your image size
     const placeholderHeight = 100; // Adjust according to your image size
 
-    if("{{ version }}" == "A"){
-        user_id = data.user_id
-        console.log("user id: " + user_id);
+    if("{{ version }}" == "A" && user_id != data.user_id){
+        console.error("User id mismatch: " + user_id + " != " + data.user_id);
     }
     
     // Add new images dynamically

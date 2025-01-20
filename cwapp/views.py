@@ -35,21 +35,28 @@ import pickle
 def IndexView(request,version="A"):
     template_name = "index.html"
     images = 9
-    n = list(map(str,range(1,10)))
     if version not in ["A","B"]:
         version = "A"
-    context = { 'images': images, 'n': n, 'version': version }
+    n = list(map(str,range(1,10))) if version == "B" else list(map(str,range(9)))
+    user_id = -1
 
     # check if default exists
-    a = Layout.objects.filter(id__in=n).values_list('data', flat=True)
-    if(len(a) < 9):
-        for offspring in init_population():
-            layout = Layout(data=json.dumps(offspring.tolist()), pub_date=timezone.now())
-            layout.save()
-            img_path = imgFromArray(offspring, f"static/assets/generated/img_{layout.id}.png")
-            layout.img_path = img_path
-            layout.save()
-
+    if version == "B":
+        a = Layout.objects.filter(id__in=n).values_list('data', flat=True)
+        if(len(a) < 9):
+            for offspring in init_population():
+                layout = Layout(data=json.dumps(offspring.tolist()), pub_date=timezone.now())
+                layout.save()
+                if version == "A":
+                    img_path = imgFromArray(offspring, f"static/assets/generated/img_X_{layout.id}.png")
+                else:
+                    img_path = imgFromArray(offspring, f"static/assets/generated/img_{layout.id}.png")
+                layout.img_path = img_path
+                layout.save()
+    else:
+        user_id = _get_new_user_id()
+        
+    context = { 'images': images, 'n': n, 'version': version, 'user_id' : user_id}
     return render(request, template_name, context)
 
 def process_images(request):
@@ -112,28 +119,26 @@ def _nocppn_process_imgs(parents_ids,all_ids):
 
 def _cppn_process_imgs(user_id, parents_ids):
 
+    if user_id == -1:
+        print("ERROR")
+        return None
     stopwatch = time.time()
 
-    if user_id == -1:
-        state = _get_default_state()
-        cppnState = CPPNState( pub_date=timezone.now())
-        cppnState.save()
-        user_id = cppnState.id
-    else:
-        cppnState = CPPNState.objects.get(id=user_id)
-        state = _pickle_loads(cppnState.data)
-    
+    cppnState = CPPNState.objects.get(id=user_id)
+    state = _pickle_loads(cppnState.data)
+
    
     pipeline = _get_pipeline()
 
     # render layouts
-    state, population = pipeline.step(state)
-    pipeline.visualize_population(population, save_path="static/assets/generated", file_name=f"img_{user_id}")
 
     print("Time elapsed 1: ", time.time() - stopwatch)
 
     selected_indices = pipeline.algorithm.select_winners(parents_ids)
     state = pipeline.evole(state, selected_indices)
+    
+    state, population = pipeline.step(state)
+    pipeline.visualize_population(population, save_path="static/assets/generated", file_name=f"img_{user_id}")
 
     cppnState.data = _pickle_dumps(state)
     cppnState.pub_date = timezone.now()
@@ -170,13 +175,26 @@ def _get_pipeline():
 
 def _get_default_state():
     cppnstate0 = CPPNState.objects.filter(id=0)
-    if cppnstate0.exists():
+    if len(cppnstate0) > 0 and os.path.exists("static/assets/generated/img_X_0.png"):
         return _pickle_loads(cppnstate0[0].data)
     
     pipeline = _get_pipeline()
     state = pipeline.setup()
+    state, population = pipeline.step(state)
+    pipeline.visualize_population(population, save_path="static/assets/generated", file_name=f"img_X")
     cppnstate0 = CPPNState(data=_pickle_dumps(state), pub_date=timezone.now())
     cppnstate0.save()
+
+    # override the 0th id
+    try:
+        cppnstate0 = CPPNState.objects.get(id=0)
+    except:
+        cppnstate0 = CPPNState(pub_date=timezone.now())
+        cppnstate0.id = 0
+    cppnstate0.data = _pickle_dumps(state)
+    cppnstate0.pub_date = timezone.now()
+    cppnstate0.save()
+
     return state
 
 def _pickle_loads(data):
@@ -184,5 +202,11 @@ def _pickle_loads(data):
 
 def _pickle_dumps(data):
     return base64.b64encode(pickle.dumps(data)).decode('utf-8')
+
+def _get_new_user_id():
+    default_state = _get_default_state()
+    cppnState = CPPNState(data=_pickle_dumps(default_state),pub_date=timezone.now())
+    cppnState.save()
+    return cppnState.id
     
     
