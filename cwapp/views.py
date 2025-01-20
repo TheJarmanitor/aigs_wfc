@@ -16,15 +16,17 @@ from .models import Layout
 
 from .tools.SGAA_test import init_population
 
-from polls.tools.SimpleGAArrays import GenerateNewPopulation
-from polls.tools.SGAA_test import differentTest, imgFromArray
+from cwapp.tools.SimpleGAArrays import GenerateNewPopulation
+from cwapp.tools.SGAA_test import differentTest, imgFromArray
 
 
-def IndexView(request):
+def IndexView(request,version="A"):
     template_name = "index.html"
     images = 9
     n = list(map(str,range(1,10)))
-    context = { 'images': images, 'n': n }
+    if version not in ["A","B"]:
+        version = "A"
+    context = { 'images': images, 'n': n, 'version': version }
 
     # check if default exists
     a = Layout.objects.filter(id__in=n).values_list('data', flat=True)

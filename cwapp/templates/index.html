@@ -11,7 +11,7 @@ body {
 }
 </Style>
 <div class="main-container">
-    <h1>CPPN-NEAT2WFC</h1>
+    <h1>CPPN-NEAT2WFC:<br><br>{{ version }}</h1>
     <div id="image-container" class="grid-container">
         {% for i in n %}
         <img src="{% static 'assets/generated/img_' %}{{i}}.png" id="image-{{i}}" data-id={{i}} class="clickable-image" alt="Django image" onclick="toggleImageSelection(this)">
@@ -61,7 +61,7 @@ body {
         // Send the selected images using AJAX (or fetch)
         const csrftoken = '{{ csrf_token }}';
 
-        fetch("{% url 'polls:process_images' %}", {
+        fetch("{% url 'cwapp:process_images' %}", {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
