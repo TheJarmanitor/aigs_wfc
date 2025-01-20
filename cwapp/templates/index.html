@@ -29,6 +29,8 @@ body {
     let selectedImages = [];
     let allImages = {{ n|safe }};
     const maxSelectedImages = 4;  // Maximum number of images that can be selected
+    const version = "{{ version }}";
+    let user_id = -1;
 
     // Function to toggle selection of an image
     function toggleImageSelection(imageElement) {
@@ -67,30 +69,47 @@ body {
                 'Content-Type': 'application/json',
                 'X-CSRFToken': csrftoken  // Django's CSRF protection
             },
-            body: JSON.stringify({ selected_images: selectedImages, all_images: allImages })  // Send the selected and all images
+            body: JSON.stringify({ 
+                selected_images: selectedImages, 
+                all_images: allImages,
+                version: version,
+                user_id: user_id
+            })  // Send the selected and all images
         })
         .then(response => response.json())
         .then(data => {
             // Dynamically update the images with the new ones
-            updateImages(data.new_images);
+            updateImages(data);
         })
         .catch(error => {
             console.error('Error:', error);
         });
     }
 
-    function updateImages(newImages) {
+    function updateImages(data) {
+    const newImages = data.new_images;
     const imageContainer = document.getElementById('image-container');
     imageContainer.innerHTML = '';  // Clear old images
     
     // Set fixed dimensions to avoid squishing
     const placeholderWidth = 100;  // Adjust according to your image size
     const placeholderHeight = 100; // Adjust according to your image size
+
+    if("{{ version }}" == "A"){
+        user_id = data.user_id
+        console.log("user id: " + user_id);
+    }
     
     // Add new images dynamically
     newImages.forEach((index) => {
         const img = document.createElement('img');
-        img.src = "{% static 'assets/generated/img_' %}" + index + ".png";
+        if ("{{ version }}" == "B"){
+            img.src = "{% static 'assets/generated/img_' %}" + index + ".png";
+        }
+        else{
+            console.log("user id: " + user_id);
+            img.src = "{% static 'assets/generated/img_' %}" + user_id + '_' + index + ".png";
+        }
         img.alt = 'Generated Image ' + index;
         img.classList.add('image');
         img.id = 'image-' + index;
@@ -104,8 +123,12 @@ body {
             img.style.width = '';  // Remove inline width to allow natural size
             img.style.height = ''; // Remove inline height to allow natural size
         };
-
+        
         imageContainer.appendChild(img);
+
+        //refatch image, bcs the name of src is same and it wouldnt be updated
+        if ("{{ version }}" == "A")
+            refetchImage(img.id, img.src);
     });
 
     allImages = newImages;
@@ -130,5 +153,18 @@ body {
 
         
     }
+
+    function refetchImage(imageId, imageUrl) {
+    // Get the current image element by its ID
+    const imageElement = document.getElementById(imageId);
+    
+    if (imageElement) {
+        // Append a timestamp to the image URL to force re-fetching
+        const timestamp = new Date().getTime();
+        imageElement.src = `${imageUrl}?t=${timestamp}`;
+    } else {
+        console.error("Image element not found!");
+    }
+}
     
 </script>

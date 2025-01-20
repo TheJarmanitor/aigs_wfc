@@ -6,11 +6,11 @@ from jax import vmap, jit
 import datetime, time
 import numpy as np
 
-from interactive_NEAT import InteractiveNEAT
-from interactive_problem import InteractiveGrid
+from .interactive_NEAT import InteractiveNEAT
+from .interactive_problem import InteractiveGrid
 from tensorneat.common import State, StatefulBaseClass
 
-from tools.image_hashing import hash_grid, label_grids
+from .tools.image_hashing import hash_grid, label_grids
 import matplotlib.image as mpimg
 import matplotlib.pyplot as plt
 
@@ -71,7 +71,7 @@ class InteractivePipeline(StatefulBaseClass):
 
 
     def visualize_population(
-        self, predict, tile_size=1, pixel_size=1, save_path=None
+        self, predict, tile_size=1, pixel_size=1, save_path=None, file_name="output_pop"
     ):
         W, H = self.problem.grid_size
         population = jnp.argmax(predict, axis=2)
@@ -97,4 +97,4 @@ class InteractivePipeline(StatefulBaseClass):
                     ] = new_grid[p, y, x]
             axes[p].imshow(new_grid[p])
             if save_path is not None:
-                mpimg.imsave(f"{save_path}/output_pop_{p}.png", new_grid[p])
+                mpimg.imsave(f"{save_path}/{file_name}_{p}.png", new_grid[p])

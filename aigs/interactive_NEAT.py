@@ -6,7 +6,7 @@ import numpy as np
 
 from tensorneat.algorithm import BaseAlgorithm
 from tensorneat.genome import BaseGenome
-from interactive_species import InteractiveSpeciesController
+from .interactive_species import InteractiveSpeciesController
 from tensorneat.common import State
 
 
@@ -60,17 +60,20 @@ class InteractiveNEAT(BaseAlgorithm):
 
         return state
 
-    def select_winners(self):
+    def select_winners(self, selected_indices=None):
         # Example: Use CLI or GUI for selection
-
-        selected_indices = input(
-            "Enter the indices of the individuals you want to select as winners, separated by commas: "
-        )
-        selected_indices = list(map(int, selected_indices.split(",")))
+        if selected_indices is None:
+            selected_indices = input(
+                "Enter the indices of the individuals you want to select as winners, separated by commas: "
+            )
+            selected_indices = list(map(int, selected_indices.split(",")))
+        else:
+            selected_indices = list(map(int,selected_indices))
 
         if len(selected_indices) > 5:
             selected_indices = selected_indices[-5:]
 
+        print(f"Selected indices: {selected_indices}")
         return jnp.array(selected_indices)
 
     def _create_next_generation(self, state, winner, loser, elite_mask):

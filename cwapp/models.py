@@ -10,3 +10,10 @@ class Layout(models.Model):
 
     def __str__(self):
         return "Layout" + str(self.id)
+    
+class CPPNState(models.Model):
+    data = models.TextField()
+    pub_date = models.DateTimeField("date published")
+
+    def __str__(self):
+        return "CPPNState" + str(self.id)

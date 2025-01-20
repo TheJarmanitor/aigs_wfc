@@ -3,10 +3,8 @@ from tensorneat.problem import BaseProblem
 # %% Libraries
 from matplotlib.image import _ImageBase
 from tensorneat import genome, common
-from interactive_NEAT import InteractiveNEAT
+from .interactive_NEAT import InteractiveNEAT
 from PIL import Image
-from tools.image_hashing import hash_grid, label_grids
-from tools.visualize_cppn import visualize_output_grid
 
 import os
 import matplotlib.pyplot as plt
