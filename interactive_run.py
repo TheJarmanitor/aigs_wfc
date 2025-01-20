@@ -30,9 +30,11 @@ grid = plt.imread("images/cppn_inputs/piskel_example1.png")
 
 pipeline = InteractivePipeline(algorithm=algo, problem=problem, input_grid=grid)
 # %%
-print(test_genome.input_idx)
+state = pipeline.setup()
 
 # %%
-state = pipeline.setup()
-for _ in range(2):
+while True:
     state, population = pipeline.step(state)
+    pipeline.visualize_population(population, save_path="outputs/population/")
+    selected_indices = algo.select_winners()
+    state = pipeline.evole(state, selected_indices)
