@@ -76,7 +76,6 @@ class InteractiveNEAT(BaseAlgorithm):
     def _create_next_generation(self, state, winner, loser, elite_mask):
 
         min_size = min(len(winner), len(loser))
-        print(len(winner), len(loser))
         # find next node key for mutation
         all_nodes_keys = state.pop_nodes[:, :, 0]
         max_node_key = jnp.max(
@@ -109,12 +108,10 @@ class InteractiveNEAT(BaseAlgorithm):
             state, mutate_randkeys, n_nodes, n_conns, new_node_keys
         )  # mutated_new_nodes, mutated_new_conns
 
+        print(elite_mask)
         # elitism don't mutate
-        pop_nodes = jnp.where(elite_mask[:, None, None], n_nodes, m_n_nodes)
-        pop_conns = jnp.where(elite_mask[:, None, None], n_conns, m_n_conns)
-        print(
-            pop_nodes.shape,
-        )
+        pop_nodes = jnp.where(elite_mask[:, None, None], state.pop_nodes, m_n_nodes)
+        pop_conns = jnp.where(elite_mask[:, None, None], state.pop_conns, m_n_conns)
 
         return state.update(
             randkey=randkey,

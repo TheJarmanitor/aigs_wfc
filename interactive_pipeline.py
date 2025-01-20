@@ -61,23 +61,23 @@ class InteractivePipeline(StatefulBaseClass):
             state, self.algorithm.forward, pop_transformed
         )
 
-        labeled_predicts = jnp.argmax(predict, axis=2)
-        self.visualize_population(
-            labeled_predicts, self.input_grid, 1, save_path="outputs/population"
-        )
-        selected_indices = self.algorithm.select_winners()
-
-        state = self.algorithm.tell(state, selected_indices)
 
         return state.update(randkey=randkey), predict
 
+    def evole(self, state, selected_indices):
+        state = self.algorithm.tell(state, selected_indices)
+
+        return state
+
+
     def visualize_population(
-        self, population, input_grid, tile_size, pixel_size=1, save_path=None
+        self, predict, tile_size=1, pixel_size=1, save_path=None
     ):
         W, H = self.problem.grid_size
+        population = jnp.argmax(predict, axis=2)
         population = population.reshape(-1)
         population = np.array(population)
-        hashed_grid, hash_dict = hash_grid(input_grid, tile_size, return_dict=True)
+        hashed_grid, hash_dict = hash_grid(self.input_grid, tile_size, return_dict=True)
         _, _, label_to_tile = label_grids(hashed_grid, hash_dict)
         new_grid = np.array([label_to_tile[x] for x in population])[
             :, :, :, :-1
