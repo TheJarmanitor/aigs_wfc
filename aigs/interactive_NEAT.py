@@ -106,9 +106,9 @@ class InteractiveNEAT(BaseAlgorithm):
 
         # batch mutation
         m_n_nodes, m_n_conns = vmap(
-            self.genome.execute_mutation, in_axes=(None, 0, 0, 0, 0)
+            self.genome.execute_mutation, in_axes=(None, 0, 0, 0, 0, 0)
         )(
-            state, mutate_randkeys, n_nodes, n_conns, new_node_keys
+            state, mutate_randkeys, n_nodes, n_conns, new_node_keys, new_conn_markers
         )  # mutated_new_nodes, mutated_new_conns
 
         print(elite_mask)
