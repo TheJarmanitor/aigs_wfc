@@ -21,6 +21,7 @@ from cwapp.tools.SGAA_test import differentTest, imgFromArray
 
 
 def IndexView(request,version="A"):
+    print("HUH")
     template_name = "index.html"
     images = 9
     n = list(map(str,range(1,10)))
@@ -41,6 +42,7 @@ def IndexView(request,version="A"):
     return render(request, template_name, context)
 
 def process_images(request):
+    print("proc")
     if request.method == 'POST':
         data = json.loads(request.body)  # Parse the incoming JSON
         #print(data)
@@ -95,7 +97,7 @@ def process_images(request):
 
 
 
-
+        print(new_ids)
         return JsonResponse({'message': 'Images processed successfully', 'new_images': new_ids})
 
     return JsonResponse({'error': 'Invalid request'}, status=400)
