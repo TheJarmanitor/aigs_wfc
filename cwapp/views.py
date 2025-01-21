@@ -178,6 +178,7 @@ def _get_pipeline():
             node_gene=genome.DefaultNode(
                 activation_options=[common.ACT.sigmoid, common.ACT.tanh, common.ACT.sin]
             ),
+            init_hidden_layers=(2)
         )
 
         algo = InteractiveNEAT(
@@ -185,7 +186,7 @@ def _get_pipeline():
             genome=test_genome,
         )
 
-        problem = InteractiveGrid(grid_size=(16, 16))
+        problem = InteractiveGrid(grid_size=(32, 32))
         grid = plt.imread("aigs/images/cppn_inputs/piskel_example1.png")
 
         pipeline = InteractivePipeline(algorithm=algo, problem=problem, input_grid=grid)
