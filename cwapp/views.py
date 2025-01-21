@@ -14,12 +14,11 @@ import os
 
 from .models import Layout, CPPNState
 
-from .tools.SGAA_test import init_population
-
 from cwapp.tools.SimpleGAArrays import GenerateNewPopulation
 from cwapp.tools.SGAA_test import differentTest, imgFromArray
 from django.core.cache import cache
 
+import jax.numpy as jnp
 
 from aigs.interactive_NEAT import InteractiveNEAT
 from aigs.interactive_problem import InteractiveGrid
@@ -31,34 +30,19 @@ import base64
 import pickle
 
 IMAGES_PER_PAGE = 16
+LAYOUT_RESOLUTION = 32
 
 # Main page layout. When user opens the webpage, this method is called.
 def IndexView(request, version="A"):
     template_name = "index.html"
     if version not in ["A", "B"]:
         version = "A"
-    n = list(map(str, range(1,IMAGES_PER_PAGE+1))) if version == "B" else list(map(str, range(IMAGES_PER_PAGE)))
+    n = list(map(str, range(IMAGES_PER_PAGE)))
     user_id = -1
 
     # check if default exists
     if version == "B":
-        a = Layout.objects.filter(id__in=n).values_list("data", flat=True)
-        if len(a) < 9:
-            for offspring in init_population():
-                layout = Layout(
-                    data=json.dumps(offspring.tolist()), pub_date=timezone.now()
-                )
-                layout.save()
-                if version == "A":
-                    img_path = imgFromArray(
-                        offspring, f"static/assets/generated/img_X_{layout.id}.png"
-                    )
-                else:
-                    img_path = imgFromArray(
-                        offspring, f"static/assets/generated/img_{layout.id}.png"
-                    )
-                layout.img_path = img_path
-                layout.save()
+        _init_nocppn_population()
     else:
         user_id = _get_new_user_id()
 
@@ -178,7 +162,7 @@ def _get_pipeline():
             node_gene=genome.DefaultNode(
                 activation_options=[common.ACT.sigmoid, common.ACT.tanh, common.ACT.sin]
             ),
-            init_hidden_layers=(2)
+            init_hidden_layers=(2,)
         )
 
         algo = InteractiveNEAT(
@@ -186,7 +170,7 @@ def _get_pipeline():
             genome=test_genome,
         )
 
-        problem = InteractiveGrid(grid_size=(32, 32))
+        problem = InteractiveGrid(grid_size=(LAYOUT_RESOLUTION, LAYOUT_RESOLUTION))
         grid = plt.imread("aigs/images/cppn_inputs/piskel_example1.png")
 
         pipeline = InteractivePipeline(algorithm=algo, problem=problem, input_grid=grid)
@@ -233,3 +217,34 @@ def _get_new_user_id():
     cppnState = CPPNState(data=_pickle_dumps(default_state), pub_date=timezone.now())
     cppnState.save()
     return cppnState.id
+
+
+def _init_nocppn_population():
+    # check if default exists
+    ok = True
+
+    if len(Layout.objects.filter(id__in=range(IMAGES_PER_PAGE))) != IMAGES_PER_PAGE:
+        ok = False
+    for i in range(IMAGES_PER_PAGE):
+        if not os.path.exists(f"static/assets/generated/img_{i}.png"):
+            ok = False
+            break
+    if ok:
+        return
+
+    pipeline = _get_pipeline()
+    state = _get_default_state()
+    pop = pipeline.generate(state)
+    print(pop.shape)
+    pop = jnp.reshape(pop, (IMAGES_PER_PAGE, LAYOUT_RESOLUTION, LAYOUT_RESOLUTION, 4))
+    for i in range(IMAGES_PER_PAGE):
+        layout = Layout(data=json.dumps(pop[i].tolist()), pub_date=timezone.now())
+        layout.id = i
+        layout.save()
+        img_path = imgFromArray(
+            pop[i], f"static/assets/generated/img_{layout.id}.png"
+        )
+        layout.img_path = img_path
+        layout.save()
+
+

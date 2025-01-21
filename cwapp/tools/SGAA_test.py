@@ -13,7 +13,7 @@ def differentTest(offspring,others):
             return False
     return True
 
-def init_population():
+def UNUSED_init_population():
     parents = jnp.zeros((9,32,32,3)).tolist()
     for i in range(32):
         for j in range(32):
