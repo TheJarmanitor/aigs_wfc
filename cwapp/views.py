@@ -30,13 +30,14 @@ import matplotlib.pyplot as plt
 import base64
 import pickle
 
+IMAGES_PER_PAGE = 16
 
+# Main page layout. When user opens the webpage, this method is called.
 def IndexView(request, version="A"):
     template_name = "index.html"
-    images = 9
     if version not in ["A", "B"]:
         version = "A"
-    n = list(map(str, range(1, 10))) if version == "B" else list(map(str, range(9)))
+    n = list(map(str, range(1,IMAGES_PER_PAGE+1))) if version == "B" else list(map(str, range(IMAGES_PER_PAGE)))
     user_id = -1
 
     # check if default exists
@@ -61,10 +62,10 @@ def IndexView(request, version="A"):
     else:
         user_id = _get_new_user_id()
 
-    context = {"images": images, "n": n, "version": version, "user_id": user_id}
+    context = {"images": IMAGES_PER_PAGE, "n": n, "version": version, "user_id": user_id}
     return render(request, template_name, context)
 
-
+# when clicked on Mutate button, this process is called on the server
 def process_images(request):
     if request.method == "POST":
         data = json.loads(request.body)  # Parse the incoming JSON
@@ -101,7 +102,7 @@ def _nocppn_process_imgs(parents_ids, all_ids):
 
     # get new population
     offsprings = GenerateNewPopulation(
-        parents, 9 - len(parents), 0.1, 0.5, keep_parents=False
+        parents, IMAGES_PER_PAGE - len(parents), 0.1, 0.5, keep_parents=False
     )
 
     # add each new layout to the database and get id
@@ -124,7 +125,7 @@ def _nocppn_process_imgs(parents_ids, all_ids):
             new_ids.append(str(offsprings_ids.pop(0)))
 
     # remove old layouts
-    delete_ids = [id for id in all_ids if id not in new_ids and int(id) > 9]
+    delete_ids = [id for id in all_ids if id not in new_ids and int(id) > IMAGES_PER_PAGE]
     Layout.objects.filter(id__in=delete_ids).delete()
     for id in delete_ids:
         os.remove(f"static/assets/generated/img_{id}.png")
@@ -162,7 +163,7 @@ def _cppn_process_imgs(user_id, parents_ids):
 
     print("Time elapsed 2: ", time.time() - stopwatch)
 
-    return list(range(9)), user_id
+    return list(range(IMAGES_PER_PAGE)), user_id
 
 
 def _get_pipeline():
@@ -180,7 +181,7 @@ def _get_pipeline():
         )
 
         algo = InteractiveNEAT(
-            pop_size=9,
+            pop_size=IMAGES_PER_PAGE,
             genome=test_genome,
         )
 

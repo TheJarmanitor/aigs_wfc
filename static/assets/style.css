@@ -28,7 +28,7 @@ img:hover {
 
 .grid-container {
     display: grid;
-    grid-template-columns: repeat(3, 1fr); /* Create 3 equal-width columns */
+    grid-template-columns: repeat(4, 1fr); /* Create 3 equal-width columns */
     gap: 6px; /* Add space between images */
     justify-items: center; /* Center images horizontally */
     align-items: center; /* Center images vertically */
