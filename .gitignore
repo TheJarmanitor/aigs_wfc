@@ -634,4 +634,5 @@ $RECYCLE.BIN/
 untracked/
 outputs/
 static/assets/generated/*
+!static/assets/generated/.gitkeep
 db.sqlite3
