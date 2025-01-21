@@ -29,8 +29,9 @@ import matplotlib.pyplot as plt
 import base64
 import pickle
 
-IMAGES_PER_PAGE = 16
-LAYOUT_RESOLUTION = 32
+IMAGES_PER_PAGE = 20
+LAYOUT_RESOLUTION = 64
+HIDDEN_LAYERS = (3,4)
 
 # Main page layout. When user opens the webpage, this method is called.
 def IndexView(request, version="A"):
@@ -163,7 +164,8 @@ def _get_pipeline():
             node_gene=genome.DefaultNode(
                 activation_options=[common.ACT.sigmoid, common.ACT.tanh, common.ACT.sin]
             ),
-            init_hidden_layers=(2,)
+            init_hidden_layers=HIDDEN_LAYERS,
+            max_conns=128,
         )
 
         algo = InteractiveNEAT(
