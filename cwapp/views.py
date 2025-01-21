@@ -35,8 +35,9 @@ LAYOUT_RESOLUTION = 32
 # Main page layout. When user opens the webpage, this method is called.
 def IndexView(request, version="A"):
     template_name = "index.html"
-    if version not in ["A", "B"]:
-        version = "A"
+    if version not in ["A", "B","a", "b"]:
+        version = "a"
+    version = version.upper()
     n = list(map(str, range(IMAGES_PER_PAGE)))
     user_id = -1
 
