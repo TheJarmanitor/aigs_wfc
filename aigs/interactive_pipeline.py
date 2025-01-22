@@ -21,6 +21,7 @@ class InteractivePipeline(StatefulBaseClass):
         algorithm: InteractiveNEAT,
         problem: InteractiveGrid,
         input_grid,
+        tile_size=1,
         seed: int = 42,
         is_save: bool = False,
         save_dir=None,
@@ -28,8 +29,14 @@ class InteractivePipeline(StatefulBaseClass):
         self.algorithm = algorithm
         self.problem = problem
         self.input_grid = input_grid
+        self.tile_size = tile_size
         self.seed = seed
         self.pop_size = self.algorithm.pop_size
+
+        hashed_grid, hash_dict = hash_grid(
+            self.input_grid, self.tile_size, return_dict=True
+        )
+        _, self.unique_labels, self.label_to_tile = label_grids(hashed_grid, hash_dict)
 
         np.random.seed(self.seed)
 
@@ -66,15 +73,13 @@ class InteractivePipeline(StatefulBaseClass):
         return state
 
     def visualize_population(
-        self, predict, tile_size=1, pixel_size=1, save_path=None, file_name="output_pop"
+        self, predict, pixel_size=1, save_path=None, file_name="output_pop"
     ):
         W, H = self.problem.grid_size
         population = jnp.argmax(predict, axis=2)
         population = population.reshape(-1)
         population = np.array(population)
-        hashed_grid, hash_dict = hash_grid(self.input_grid, tile_size, return_dict=True)
-        _, _, label_to_tile = label_grids(hashed_grid, hash_dict)
-        new_grid = np.array([label_to_tile[x] for x in population])[
+        new_grid = np.array([self.label_to_tile[x] for x in population])[
             :, :, :, :-1
         ].reshape(-1, W, H, 3)
         img = np.zeros(

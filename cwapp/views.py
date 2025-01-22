@@ -31,12 +31,13 @@ import pickle
 
 IMAGES_PER_PAGE = 20
 LAYOUT_RESOLUTION = 64
-HIDDEN_LAYERS = (3,4)
+HIDDEN_LAYERS = (4, 4, 4)
+
 
 # Main page layout. When user opens the webpage, this method is called.
 def IndexView(request, version="A"):
     template_name = "index.html"
-    if version not in ["A", "B","a", "b"]:
+    if version not in ["A", "B", "C", "a", "b", "c"]:
         version = "a"
     version = version.upper()
     n = list(map(str, range(IMAGES_PER_PAGE)))
@@ -45,11 +46,19 @@ def IndexView(request, version="A"):
     # check if default exists
     if version == "B":
         _init_nocppn_population()
+    elif version == "C":
+        user_id = _get_new_user_id(wfc=False)
     else:
         user_id = _get_new_user_id()
 
-    context = {"images": IMAGES_PER_PAGE, "n": n, "version": version, "user_id": user_id}
+    context = {
+        "images": IMAGES_PER_PAGE,
+        "n": n,
+        "version": version,
+        "user_id": user_id,
+    }
     return render(request, template_name, context)
+
 
 # when clicked on Mutate button, this process is called on the server
 def process_images(request):
@@ -59,12 +68,16 @@ def process_images(request):
         parents_ids = data.get("selected_images", [])
         all_ids = data.get("all_images", [])
         version = data.get("version", "A")
-        if version not in ["A", "B"]:
+        if version not in ["A", "B", "C"]:
             version = "A"
 
         if version == "B":
             new_ids = _nocppn_process_imgs(parents_ids, all_ids)
             user_id = -2
+        elif version == "C":
+            user_id = data.get("user_id", -1)
+            print("user_id: ", user_id)
+            new_ids, user_id = _cppn_process_imgs(user_id, parents_ids, wfc=False)
         else:
             user_id = data.get("user_id", -1)
             print("user_id: ", user_id)
@@ -111,7 +124,9 @@ def _nocppn_process_imgs(parents_ids, all_ids):
             new_ids.append(str(offsprings_ids.pop(0)))
 
     # remove old layouts
-    delete_ids = [id for id in all_ids if id not in new_ids and int(id) > IMAGES_PER_PAGE]
+    delete_ids = [
+        id for id in all_ids if id not in new_ids and int(id) > IMAGES_PER_PAGE
+    ]
     Layout.objects.filter(id__in=delete_ids).delete()
     for id in delete_ids:
         os.remove(f"static/assets/generated/img_{id}.png")
@@ -119,7 +134,7 @@ def _nocppn_process_imgs(parents_ids, all_ids):
     return new_ids
 
 
-def _cppn_process_imgs(user_id, parents_ids):
+def _cppn_process_imgs(user_id, parents_ids, wfc=True):
 
     if user_id == -1:
         print("ERROR")
@@ -129,7 +144,7 @@ def _cppn_process_imgs(user_id, parents_ids):
     cppnState = CPPNState.objects.get(id=user_id)
     state = _pickle_loads(cppnState.data)
 
-    pipeline = _get_pipeline()
+    pipeline = _get_pipeline(wfc)
 
     # render layouts
 
@@ -152,40 +167,76 @@ def _cppn_process_imgs(user_id, parents_ids):
     return list(range(IMAGES_PER_PAGE)), user_id
 
 
-def _get_pipeline():
+def _get_pipeline(wfc=True):
     global pipeline
 
     # check if pipeline exists
-    if not "pipeline" in globals():
-        print("setupping")
-        test_genome = genome.DefaultGenome(
-            num_inputs=2,
-            num_outputs=4,
-            node_gene=genome.DefaultNode(
-                activation_options=[common.ACT.sigmoid, common.ACT.tanh, common.ACT.sin]
-            ),
-            init_hidden_layers=HIDDEN_LAYERS,
-            max_conns=128,
-        )
+    if wfc:
+        if not "pipeline" in globals():
+            print("setupping")
+            test_genome = genome.DefaultGenome(
+                num_inputs=2,
+                num_outputs=4,
+                node_gene=genome.DefaultNode(
+                    activation_options=[
+                        common.ACT.sigmoid,
+                        common.ACT.tanh,
+                        common.ACT.sin,
+                    ]
+                ),
+                init_hidden_layers=HIDDEN_LAYERS,
+                max_conns=128,
+            )
 
-        algo = InteractiveNEAT(
-            pop_size=IMAGES_PER_PAGE,
-            genome=test_genome,
-        )
+            algo = InteractiveNEAT(
+                pop_size=IMAGES_PER_PAGE,
+                genome=test_genome,
+            )
 
-        problem = InteractiveGrid(grid_size=(LAYOUT_RESOLUTION, LAYOUT_RESOLUTION))
-        grid = plt.imread("aigs/images/cppn_inputs/piskel_example1.png")
+            problem = InteractiveGrid(grid_size=(LAYOUT_RESOLUTION, LAYOUT_RESOLUTION))
+            grid = plt.imread("aigs/images/cppn_inputs/piskel_example1.png")
 
-        pipeline = InteractivePipeline(algorithm=algo, problem=problem, input_grid=grid)
+            pipeline = InteractivePipeline(
+                algorithm=algo, problem=problem, input_grid=grid
+            )
+
+    else:
+        if not "pipeline" in globals():
+            test_genome = genome.DefaultGenome(
+                num_inputs=2,
+                num_outputs=18,
+                node_gene=genome.DefaultNode(
+                    activation_options=[
+                        common.ACT.sigmoid,
+                        common.ACT.tanh,
+                        common.ACT.sin,
+                    ]
+                ),
+                init_hidden_layers=HIDDEN_LAYERS,
+                max_conns=128,
+            )
+
+            algo = InteractiveNEAT(
+                pop_size=IMAGES_PER_PAGE,
+                genome=test_genome,
+            )
+
+            problem = InteractiveGrid(grid_size=(LAYOUT_RESOLUTION, LAYOUT_RESOLUTION))
+            grid = plt.imread(
+                "aigs/images/tileset_inputs/dragon_warrior/dragonwarr_island.png"
+            )
+            pipeline = InteractivePipeline(
+                algorithm=algo, problem=problem, input_grid=grid, tile_size=16
+            )
     return pipeline
 
 
-def _get_default_state():
+def _get_default_state(wfc=True):
     cppnstate0 = CPPNState.objects.filter(id=0)
     if len(cppnstate0) > 0 and os.path.exists("static/assets/generated/img_X_0.png"):
         return _pickle_loads(cppnstate0[0].data)
 
-    pipeline = _get_pipeline()
+    pipeline = _get_pipeline(wfc)
     state = pipeline.setup()
     population = pipeline.generate(state)
     pipeline.visualize_population(
@@ -215,8 +266,8 @@ def _pickle_dumps(data):
     return base64.b64encode(pickle.dumps(data)).decode("utf-8")
 
 
-def _get_new_user_id():
-    default_state = _get_default_state()
+def _get_new_user_id(wfc=True):
+    default_state = _get_default_state(wfc)
     cppnState = CPPNState(data=_pickle_dumps(default_state), pub_date=timezone.now())
     cppnState.save()
     return cppnState.id
@@ -244,10 +295,6 @@ def _init_nocppn_population():
         layout = Layout(data=json.dumps(pop[i].tolist()), pub_date=timezone.now())
         layout.id = i
         layout.save()
-        img_path = imgFromArray(
-            pop[i], f"static/assets/generated/img_{layout.id}.png"
-        )
+        img_path = imgFromArray(pop[i], f"static/assets/generated/img_{layout.id}.png")
         layout.img_path = img_path
         layout.save()
-
-
