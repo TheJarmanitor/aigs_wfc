@@ -103,9 +103,10 @@ class RuleSet:
             f.write("</set>\n")
     
     # this is our custom format
-    def output_to_folder_rules(self, name: str):
+    def output_to_folder_rules(self, name: str, output_dir = None):
         # get /outputs/ folder
-        output_dir = os.path.join(os.getcwd(), "outputs")
+        if output_dir is None:
+            output_dir = os.path.join(os.getcwd(), "outputs")
         if not os.path.exists(output_dir):
             os.makedirs(output_dir)
         # create folder for this rule set

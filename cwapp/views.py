@@ -29,9 +29,29 @@ import matplotlib.pyplot as plt
 import base64
 import pickle
 
-IMAGES_PER_PAGE = 20
-LAYOUT_RESOLUTION = 64
+import numpy as np
+from aigs.tools import rule_split, wfc, visualize_wfc, prepared_bundles
+from PIL import Image
+
+IMAGES_PER_PAGE = 10
+LAYOUT_RESOLUTION = 16
 HIDDEN_LAYERS = (3,4)
+
+# WFC settings
+WFC_PATH = "aigs/images/tileset_inputs/dragon_warrior/dragonwarr_island.png"
+WFC_TILE_SIZE = 16
+BUNDLE_WEIGHT = 100.0
+BUNDLE = prepared_bundles.bundle_dragon_warr
+WFC_SIZE = LAYOUT_RESOLUTION
+STATIC_WFC_OUTPUT_PATH = "static/assets/output"
+
+LAYOUT_COLORS = [
+    [ 40, 229,  34], #land
+    [ 24,  28, 214], #water
+    [ 85,  10,  10], #mountains
+    [ 211, 26,  26]  #city
+]
+
 
 # Main page layout. When user opens the webpage, this method is called.
 def IndexView(request, version="A"):
@@ -42,6 +62,7 @@ def IndexView(request, version="A"):
     n = list(map(str, range(IMAGES_PER_PAGE)))
     user_id = -1
 
+    _prepare_ruleset()
     # check if default exists
     if version == "B":
         _init_nocppn_population()
@@ -97,9 +118,12 @@ def _nocppn_process_imgs(parents_ids, all_ids):
         layout = Layout(data=json.dumps(offspring.tolist()), pub_date=timezone.now())
         layout.save()
         offsprings_ids.append(layout.id)
+
+        path_file = f"static/assets/generated/img_{layout.id}"
         img_path = imgFromArray(
-            offspring, f"static/assets/generated/img_{layout.id}.png"
+            offspring, f"{path_file}.png"
         )
+        _run_wfc(img_path,f"{path_file}_wfc.png",layout.id)
         layout.img_path = img_path
         layout.save()
 
@@ -115,6 +139,7 @@ def _nocppn_process_imgs(parents_ids, all_ids):
     Layout.objects.filter(id__in=delete_ids).delete()
     for id in delete_ids:
         os.remove(f"static/assets/generated/img_{id}.png")
+        os.remove(f"static/assets/generated/img_{id}_wfc.png")
 
     return new_ids
 
@@ -142,6 +167,10 @@ def _cppn_process_imgs(user_id, parents_ids):
     pipeline.visualize_population(
         population, save_path="static/assets/generated", file_name=f"img_{user_id}"
     )
+    for i in range(IMAGES_PER_PAGE):
+        if i in parents_ids:
+            continue
+        _run_wfc(f"static/assets/generated/img_{user_id}_{i}.png",f"img_{user_id}_{i}_wfc.png",i)
 
     cppnState.data = _pickle_dumps(state)
     cppnState.pub_date = timezone.now()
@@ -182,8 +211,11 @@ def _get_pipeline():
 
 def _get_default_state():
     cppnstate0 = CPPNState.objects.filter(id=0)
-    if len(cppnstate0) > 0 and os.path.exists("static/assets/generated/img_X_0.png"):
-        return _pickle_loads(cppnstate0[0].data)
+    if len(cppnstate0) > 0 and os.path.exists("static/assets/generated/img_X_0.png") and \
+        os.path.exists("static/assets/generated/img_X_0_wfc.png"):
+            return _pickle_loads(cppnstate0[0].data)
+    
+    
 
     pipeline = _get_pipeline()
     state = pipeline.setup()
@@ -191,6 +223,8 @@ def _get_default_state():
     pipeline.visualize_population(
         population, save_path="static/assets/generated", file_name=f"img_X"
     )
+    for i in range(IMAGES_PER_PAGE):
+        _run_wfc(f"static/assets/generated/img_X_{i}.png",f"img_X_{i}_wfc.png",i)
     cppnstate0 = CPPNState(data=_pickle_dumps(state), pub_date=timezone.now())
     cppnstate0.save()
 
@@ -249,5 +283,51 @@ def _init_nocppn_population():
         )
         layout.img_path = img_path
         layout.save()
+
+def _prepare_ruleset():
+    output_folder = WFC_PATH.replace("/","_")[:-4]
+    if os.path.exists(f"{STATIC_WFC_OUTPUT_PATH}/{output_folder}") and os.path.exists(f"{STATIC_WFC_OUTPUT_PATH}/{output_folder}/rules.pkl"):
+        return
+    os.makedirs(f"{STATIC_WFC_OUTPUT_PATH}/{output_folder}", exist_ok=True)
+
+    print("Preparing ruleset")
+
+    img = Image.open(WFC_PATH)
+    img = img.convert("RGB")
+    img = np.array(img)
+    rules = rule_split.RuleSet([list(map(lambda x: rule_split.Color(x[0], x[1], x[2]), row)) for row in img], WFC_TILE_SIZE)
+    rules.output_to_folder_rules(output_folder, output_dir = STATIC_WFC_OUTPUT_PATH)
+    print(f"Created {output_folder} rules")
+    return 
+
+def _run_wfc(layout_input_path,output_path,seed):
+    #%% Execute wfc
+    rules_file = f"{STATIC_WFC_OUTPUT_PATH}/{WFC_PATH.replace('/','_')[:-4]}/rules.pkl"
+    txt_wfc_file = f"{STATIC_WFC_OUTPUT_PATH}/{output_path}.txt"
+    image_output = f"static/assets/generated/{output_path}"
+
+    rules = pickle.load(open(rules_file, "rb"))
+    local_weights = wfc.local_weight(BUNDLE, default_weight=1.0,prob_magnitude=BUNDLE_WEIGHT, tile_count=len(rules))
+
+    layout = _layout_to_array(layout_input_path, LAYOUT_COLORS)
+
+    wfc.wfc([*range(len(rules))], rules, WFC_SIZE, WFC_SIZE,weights=local_weights, path_to_output=txt_wfc_file, layout_map = layout, seed=seed)
+    wfc_rule_path = f"{STATIC_WFC_OUTPUT_PATH}/{WFC_PATH.replace('/','_')[:-4]}/"
+    visualize_wfc.visualize_wfc(path_folder = wfc_rule_path, input_file = txt_wfc_file, output_file = image_output, SHOW_NUKES = False)
+
+def _layout_to_array(layout_path, color_map):
+    img = Image.open(layout_path)
+    img = img.convert("RGB")
+
+    color_map = [tuple(c) for c in color_map]
+    print(color_map)
+    print("---------")
+
+    out = [[0 for _ in range(LAYOUT_RESOLUTION)] for _ in range(LAYOUT_RESOLUTION)]
+    for i in range(LAYOUT_RESOLUTION):
+        for j in range(LAYOUT_RESOLUTION):
+            color = img.getpixel((i, j))
+            out[i][j] = color_map.index(color)
+    return jnp.array(out)
 
 
