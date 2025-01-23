@@ -93,7 +93,8 @@ class InteractivePipeline(StatefulBaseClass):
                     )
             else:
                 population_transform = population.reshape(-1)
-                population_transform = np.array(population)
+                population_transform = np.array(population_transform)
+                print(population_transform)
                 new_grid = np.array(
                     [self.label_to_tile[x] for x in population_transform]
                 )[:, :, :, :-1].reshape(-1, W, H, 3)

@@ -12,7 +12,7 @@ import random
 import time
 import os
 
-from .models import Layout, CPPNState
+from .models import Layout, CPPNState, PureCPPNState
 
 from cwapp.tools.SimpleGAArrays import GenerateNewPopulation
 from cwapp.tools.SGAA_test import differentTest, imgFromArray
@@ -184,14 +184,14 @@ def _cppn_process_imgs(user_id, parents_ids):
 
     population = pipeline.generate(state)
     pipeline.visualize_population(
-        population, save_path="static/assets/generated", file_name=f"img_{user_id}"
+        population, save_path="static/assets/generated", file_name=f"img_X_{user_id}"
     )
     for i in range(IMAGES_PER_PAGE):
         if i in parents_ids:
             continue
         _run_wfc(
-            f"static/assets/generated/img_{user_id}_{i}.png",
-            f"img_{user_id}_{i}_wfc.png",
+            f"static/assets/generated/img_X_{user_id}_{i}.png",
+            f"img_X_{user_id}_{i}_wfc.png",
             i,
         )
 
@@ -210,7 +210,7 @@ def _pure_cppn_procces_imgs(user_id, parents_ids):
         return None
     stopwatch = time.time()
 
-    cppnState = CPPNState.objects.get(id=user_id)
+    cppnState = PureCPPNState.objects.get(id=user_id)
     state = _pickle_loads(cppnState.data)
 
     cppn_pipeline = _get_pipeline(wfc=True)
@@ -226,13 +226,13 @@ def _pure_cppn_procces_imgs(user_id, parents_ids):
     cppn_pipeline.visualize_population(
         population,
         save_path="static/assets/output",
-        file_name=f"img_{user_id}",
+        file_name=f"img_Z_{user_id}",
         save_as_text=True,
     )
     for i in range(IMAGES_PER_PAGE):
         if i in parents_ids:
             continue
-        _run_wfc(output_path=f"img_{user_id}_{i}_wfc.png", seed=i)
+        _run_wfc(output_path=f"img_Z_{user_id}_{i}_wfc.png", seed=i)
 
     cppnState.data = _pickle_dumps(state)
     cppnState.pub_date = timezone.now()
@@ -243,7 +243,7 @@ def _pure_cppn_procces_imgs(user_id, parents_ids):
     return list(range(IMAGES_PER_PAGE)), user_id
 
 
-def _get_pipeline(wfc=True):
+def _get_pipeline(wfc=False):
     global pipeline
     global cppn_pipeline
 
@@ -343,11 +343,11 @@ def _get_default_state():
 
 
 def _get_cppn_state():
-    cppnstate0 = CPPNState.objects.filter(id=0)
+    cppnstate0 = PureCPPNState.objects.filter(id=0)
     if (
         len(cppnstate0) > 0
-        and os.path.exists("static/assets/generated/img_X_0.png")
-        and os.path.exists("static/assets/generated/img_X_0_wfc.png")
+        and os.path.exists("static/assets/generated/img_Z_0.png")
+        and os.path.exists("static/assets/generated/img_Z_0_wfc.png")
     ):
         return _pickle_loads(cppnstate0[0].data)
 
@@ -357,19 +357,19 @@ def _get_cppn_state():
     cppn_pipeline.visualize_population(
         population,
         save_path="static/assets/output",
-        file_name=f"img_X",
+        file_name=f"img_Z",
         save_as_text=True,
     )
     for i in range(IMAGES_PER_PAGE):
-        _run_wfc(output_path=f"img_X_{i}_wfc.png", seed=i)
-    cppnstate0 = CPPNState(data=_pickle_dumps(state), pub_date=timezone.now())
+        _run_wfc(output_path=f"img_Z_{i}_wfc.png", seed=i)
+    cppnstate0 = PureCPPNState(data=_pickle_dumps(state), pub_date=timezone.now())
     cppnstate0.save()
 
     # override the 0th id
     try:
-        cppnstate0 = CPPNState.objects.get(id=0)
+        cppnstate0 = PureCPPNState.objects.get(id=0)
     except:
-        cppnstate0 = CPPNState(pub_date=timezone.now())
+        cppnstate0 = PureCPPNState(pub_date=timezone.now())
         cppnstate0.id = 0
     cppnstate0.data = _pickle_dumps(state)
     cppnstate0.pub_date = timezone.now()
@@ -389,9 +389,14 @@ def _pickle_dumps(data):
 def _get_new_user_id(wfc=True):
     if wfc:
         default_state = _get_default_state()
+        cppnState = CPPNState(
+            data=_pickle_dumps(default_state), pub_date=timezone.now()
+        )
     else:
         default_state = _get_cppn_state()
-    cppnState = CPPNState(data=_pickle_dumps(default_state), pub_date=timezone.now())
+        cppnState = PureCPPNState(
+            data=_pickle_dumps(default_state), pub_date=timezone.now()
+        )
     cppnState.save()
     return cppnState.id
 

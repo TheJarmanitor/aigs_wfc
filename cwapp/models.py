@@ -17,3 +17,10 @@ class CPPNState(models.Model):
 
     def __str__(self):
         return "CPPNState" + str(self.id)
+    
+class PureCPPNState(models.Model):
+    data = models.TextField()
+    pub_date = models.DateTimeField("date published")
+
+    def __str__(self):
+        return "PureCPPNState" + str(self.id)
