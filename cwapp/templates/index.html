@@ -13,15 +13,10 @@
 <div class="main-container">
     <h1>CPPN-NEAT2WFC:<br /><br />{{ version }}</h1>
     <div id="image-container" class="grid-container">
-        {% for i in n %} {% if version == "B" %}
-        <img
-            src="{% static 'assets/generated/img_' %}{{i}}_wfc.png"
-            id="image-{{i}}"
-            data-id="{{i}}"
-            class="clickable-image"
-            alt="Django image"
-            onclick="toggleImageSelection(this)"
-        />
+
+        {% for i in n %}
+        {% if version == "B" %}
+        <img src="{% static 'assets/generated/B/img_' %}{{i}}_wfc.png" id="image-{{i}}" data-id={{i}} class="clickable-image" alt="Django image" onclick="toggleImageSelection(this)">
         {% else %}
         <img
             src="{% static 'assets/generated/img_' %}X_{{i}}_wfc.png"
@@ -84,27 +79,26 @@
             // Send the selected images using AJAX (or fetch)
             const csrftoken = '{{ csrf_token }}';
 
-            fetch("{% url 'cwapp:process_images' %}", {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': csrftoken  // Django's CSRF protection
-                },
-                body: JSON.stringify({
-                    selected_images: selectedImages,
-                    all_images: allImages,
-                    version: version,
-                    user_id: user_id
-                })  // Send the selected and all images
-            })
-            .then(response => response.json())
-            .then(data => {
-                // Dynamically update the images with the new ones
-                updateImages(data);
-            })
-            .catch(error => {
-                console.error('Error:', error);
-            });
+
+    function updateImages(data) {
+    const newImages = data.new_images;
+    const imageContainer = document.getElementById('image-container');
+    imageContainer.innerHTML = '';  // Clear old images
+    
+    // Set fixed dimensions to avoid squishing
+    const placeholderWidth = 100;  // Adjust according to your image size
+    const placeholderHeight = 100; // Adjust according to your image size
+
+    if("{{ version }}" == "A" && user_id != data.user_id){
+        console.error("User id mismatch: " + user_id + " != " + data.user_id);
+    }
+    
+    // Add new images dynamically
+    newImages.forEach((index) => {
+        const img = document.createElement('img');
+        if ("{{ version }}" == "B"){
+            img.src = "{% static 'assets/generated/B/img_' %}" + index + "_wfc.png";
+
         }
 
         function updateImages(data) {
