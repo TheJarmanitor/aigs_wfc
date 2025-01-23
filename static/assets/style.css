@@ -9,9 +9,9 @@ h1 {
 
 img {
     border: 6px solid transparent;
-    min-height: 100px;
-    min-height: 100px;
-    object-fit: cover;
+    max-width: 100%; /* Ensures the image doesn't exceed the container width */
+    max-height: 100%; /* Ensures the image doesn't exceed the container height */
+    object-fit: cover; /* Maintain aspect ratio while covering the grid cell */
 }
 
 img:hover {
@@ -29,16 +29,22 @@ img:hover {
 .grid-container {
     display: grid;
     grid-template-columns: repeat(5, 1fr); /* Create 3 equal-width columns */
-    gap: 6px; /* Add space between images */
+    gap: 14px; /* Add space between images */
     justify-items: center; /* Center images horizontally */
     align-items: center; /* Center images vertically */
     margin: 2em;
 }
 
+.grid-container div {
+    width: 100px; /* Set a fixed width for each grid cell */
+    height: 100px; /* Set a fixed height for each grid cell */
+    overflow: hidden; /* Hide overflow if the image is larger than the grid cell */
+}
+
 .main-container {
     align-self: center; /* Center the main container vertically */
     justify-self: center; /* Center the main container horizontally */
-    max-width: 800px; /* Limit the width of the main container */
+    width: auto
 }
 
 .button-container {

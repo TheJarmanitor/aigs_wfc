@@ -57,7 +57,12 @@ def test_GenerateNewPopulation():
 
 def imgFromArray(arr, path):
     arr = jnp.argmax(arr,2)
-    RGB = [[1.,0,0],[0,1.,0],[0,0,1.]]
+    RGB = [
+    [ 40, 229,  34], #land
+    [ 24,  28, 214], #water
+    [ 85,  10,  10], #mountains
+    [ 211, 26,  26]  #city
+]
     img = np.zeros((arr.shape[0],arr.shape[1],3))
     for i in range(3):
         img[arr == i] = RGB[i]

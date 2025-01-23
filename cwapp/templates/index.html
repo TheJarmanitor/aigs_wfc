@@ -15,9 +15,9 @@ body {
     <div id="image-container" class="grid-container">
         {% for i in n %}
         {% if version == "B" %}
-        <img src="{% static 'assets/generated/img_' %}{{i}}.png" id="image-{{i}}" data-id={{i}} class="clickable-image" alt="Django image" onclick="toggleImageSelection(this)">
+        <img src="{% static 'assets/generated/img_' %}{{i}}_wfc.png" id="image-{{i}}" data-id={{i}} class="clickable-image" alt="Django image" onclick="toggleImageSelection(this)">
         {% else %}
-        <img src="{% static 'assets/generated/img_' %}X_{{i}}.png" id="image-{{i}}" data-id={{i}} class="clickable-image" alt="Django image" onclick="toggleImageSelection(this)">
+        <img src="{% static 'assets/generated/img_' %}X_{{i}}_wfc.png" id="image-{{i}}" data-id={{i}} class="clickable-image" alt="Django image" onclick="toggleImageSelection(this)">
         {% endif %}
         {% endfor %}
     </div>
@@ -107,11 +107,11 @@ body {
     newImages.forEach((index) => {
         const img = document.createElement('img');
         if ("{{ version }}" == "B"){
-            img.src = "{% static 'assets/generated/img_' %}" + index + ".png";
+            img.src = "{% static 'assets/generated/img_' %}" + index + "_wfc.png";
         }
         else{
             console.log("user id: " + user_id);
-            img.src = "{% static 'assets/generated/img_' %}" + user_id + '_' + index + ".png";
+            img.src = "{% static 'assets/generated/img_' %}" + user_id + '_' + index + "_wfc.png";
         }
         img.alt = 'Generated Image ' + index;
         img.classList.add('image');

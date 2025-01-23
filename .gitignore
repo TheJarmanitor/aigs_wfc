@@ -635,4 +635,6 @@ untracked/
 outputs/
 static/assets/generated/*
 !static/assets/generated/.gitkeep
+static/assets/output/*
+!static/assets/output/.gitkeep
 db.sqlite3
