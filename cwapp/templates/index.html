@@ -15,7 +15,7 @@ body {
     <div id="image-container" class="grid-container">
         {% for i in n %}
         {% if version == "B" %}
-        <img src="{% static 'assets/generated/img_' %}{{i}}_wfc.png" id="image-{{i}}" data-id={{i}} class="clickable-image" alt="Django image" onclick="toggleImageSelection(this)">
+        <img src="{% static 'assets/generated/B/img_' %}{{i}}_wfc.png" id="image-{{i}}" data-id={{i}} class="clickable-image" alt="Django image" onclick="toggleImageSelection(this)">
         {% else %}
         <img src="{% static 'assets/generated/img_' %}X_{{i}}_wfc.png" id="image-{{i}}" data-id={{i}} class="clickable-image" alt="Django image" onclick="toggleImageSelection(this)">
         {% endif %}
@@ -107,7 +107,7 @@ body {
     newImages.forEach((index) => {
         const img = document.createElement('img');
         if ("{{ version }}" == "B"){
-            img.src = "{% static 'assets/generated/img_' %}" + index + "_wfc.png";
+            img.src = "{% static 'assets/generated/B/img_' %}" + index + "_wfc.png";
         }
         else{
             console.log("user id: " + user_id);

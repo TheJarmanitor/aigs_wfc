@@ -63,8 +63,9 @@ def imgFromArray(arr, path):
     [ 85,  10,  10], #mountains
     [ 211, 26,  26]  #city
 ]
+    RGB = [[x/255. for x in rgb] for rgb in RGB]
     img = np.zeros((arr.shape[0],arr.shape[1],3))
-    for i in range(3):
+    for i in range(len(RGB)):
         img[arr == i] = RGB[i]
     mpimg.imsave(path,img)
     return path

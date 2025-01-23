@@ -119,11 +119,11 @@ def _nocppn_process_imgs(parents_ids, all_ids):
         layout.save()
         offsprings_ids.append(layout.id)
 
-        path_file = f"static/assets/generated/img_{layout.id}"
+        path_file = f"static/assets/generated/B/img_{layout.id}"
         img_path = imgFromArray(
             offspring, f"{path_file}.png"
         )
-        _run_wfc(img_path,f"{path_file}_wfc.png",layout.id)
+        _run_wfc(img_path,f"B/img_{layout.id}_wfc.png",layout.id)
         layout.img_path = img_path
         layout.save()
 
@@ -138,8 +138,8 @@ def _nocppn_process_imgs(parents_ids, all_ids):
     delete_ids = [id for id in all_ids if id not in new_ids and int(id) > IMAGES_PER_PAGE]
     Layout.objects.filter(id__in=delete_ids).delete()
     for id in delete_ids:
-        os.remove(f"static/assets/generated/img_{id}.png")
-        os.remove(f"static/assets/generated/img_{id}_wfc.png")
+        os.remove(f"static/assets/generated/B/img_{id}.png")
+        os.remove(f"static/assets/generated/B/img_{id}_wfc.png")
 
     return new_ids
 
@@ -262,8 +262,10 @@ def _init_nocppn_population():
 
     if len(Layout.objects.filter(id__in=range(IMAGES_PER_PAGE))) != IMAGES_PER_PAGE:
         ok = False
+    if not os.path.exists(f"static/assets/generated/B/"):
+        ok = False
     for i in range(IMAGES_PER_PAGE):
-        if not os.path.exists(f"static/assets/generated/img_{i}.png"):
+        if not os.path.exists(f"static/assets/generated/B/img_{i}.png") or not os.path.exists(f"static/assets/generated/B/img_{i}_wfc.png"):
             ok = False
             break
     if ok:
@@ -273,16 +275,19 @@ def _init_nocppn_population():
     state = _get_default_state()
     pop = pipeline.generate(state)
     print(pop.shape)
+    os.makedirs(f"static/assets/generated/B/", exist_ok=True)
+    os.makedirs(f"static/assets/output/B/", exist_ok=True)
     pop = jnp.reshape(pop, (IMAGES_PER_PAGE, LAYOUT_RESOLUTION, LAYOUT_RESOLUTION, 4))
     for i in range(IMAGES_PER_PAGE):
         layout = Layout(data=json.dumps(pop[i].tolist()), pub_date=timezone.now())
         layout.id = i
         layout.save()
         img_path = imgFromArray(
-            pop[i], f"static/assets/generated/img_{layout.id}.png"
+            pop[i], f"static/assets/generated/B/img_{layout.id}.png"
         )
         layout.img_path = img_path
         layout.save()
+        _run_wfc(img_path,f"B/img_{layout.id}_wfc.png",i)
 
 def _prepare_ruleset():
     output_folder = WFC_PATH.replace("/","_")[:-4]
