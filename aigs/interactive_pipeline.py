@@ -73,7 +73,7 @@ class InteractivePipeline(StatefulBaseClass):
         return state
 
     def visualize_population(
-        self, predict, pixel_size=1, save_path=None, file_name="output_pop"
+        self, predict, pixel_size=1, save_path=None, file_name="output_pop", save_as_text=False
     ):
         W, H = self.problem.grid_size
         population = jnp.argmax(predict, axis=2)
@@ -88,13 +88,16 @@ class InteractivePipeline(StatefulBaseClass):
         fig, axes = plt.subplots(1, self.pop_size)
 
         for p in range(self.pop_size):
-            for y in range(H):
-                for x in range(W):
-                    img[
-                        p,
-                        y * pixel_size : (y + 1) * pixel_size,
-                        x * pixel_size : (x + 1) * pixel_size,
-                    ] = new_grid[p, y, x]
-            axes[p].imshow(new_grid[p])
+            # for y in range(H):
+            #     for x in range(W):
+            #         img[
+            #             p,
+            #             y * pixel_size : (y + 1) * pixel_size,
+            #             x * pixel_size : (x + 1) * pixel_size,
+            #         ] = new_grid[p, y, x]
+            # axes[p].imshow(new_grid[p])
             if save_path is not None:
-                mpimg.imsave(f"{save_path}/{file_name}_{p}.png", new_grid[p])
+                if save_as_text:
+                    np.savetxt(f"{save_path}/{file_name}_{p}.txt", new_grid[p])
+                else:
+                    mpimg.imsave(f"{save_path}/{file_name}_{p}.png", new_grid[p])

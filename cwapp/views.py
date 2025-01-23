@@ -29,12 +29,10 @@ import matplotlib.pyplot as plt
 import base64
 import pickle
 
-<<<<<<< HEAD
 IMAGES_PER_PAGE = 20
 LAYOUT_RESOLUTION = 64
 HIDDEN_LAYERS = (4, 4, 4)
 
-=======
 import numpy as np
 from aigs.tools import rule_split, wfc, visualize_wfc, prepared_bundles
 from PIL import Image
@@ -42,7 +40,6 @@ from PIL import Image
 IMAGES_PER_PAGE = 10
 LAYOUT_RESOLUTION = 16
 HIDDEN_LAYERS = (3,4)
->>>>>>> reload
 
 # WFC settings
 WFC_PATH = "aigs/images/tileset_inputs/dragon_warrior/dragonwarr_island.png"
@@ -104,7 +101,7 @@ def process_images(request):
         elif version == "C":
             user_id = data.get("user_id", -1)
             print("user_id: ", user_id)
-            new_ids, user_id = _cppn_process_imgs(user_id, parents_ids, wfc=False)
+            new_ids, user_id = _pure_cppn_procces_imgs(user_id, parents_ids)
         else:
             user_id = data.get("user_id", -1)
             print("user_id: ", user_id)
@@ -164,8 +161,7 @@ def _nocppn_process_imgs(parents_ids, all_ids):
 
     return new_ids
 
-
-def _cppn_process_imgs(user_id, parents_ids, wfc=True):
+def _cppn_process_imgs(user_id, parents_ids):
 
     if user_id == -1:
         print("ERROR")
@@ -175,7 +171,7 @@ def _cppn_process_imgs(user_id, parents_ids, wfc=True):
     cppnState = CPPNState.objects.get(id=user_id)
     state = _pickle_loads(cppnState.data)
 
-    pipeline = _get_pipeline(wfc)
+    pipeline = _get_pipeline()
 
     # render layouts
 
@@ -200,6 +196,33 @@ def _cppn_process_imgs(user_id, parents_ids, wfc=True):
     print("Time elapsed 2: ", time.time() - stopwatch)
 
     return list(range(IMAGES_PER_PAGE)), user_id
+
+def _pure_cppn_procces_imgs(user_id, parents_ids):
+    if user_id == -1:
+        print("ERROR")
+        return None
+    stopwatch = time.time()
+
+    cppnState = CPPNState.objects.get(id=user_id)
+    state = _pickle_loads(cppnState.data)
+
+    pipeline = _get_pipeline(wfc=True)
+
+    # render layouts
+
+    print("Time elapsed 1: ", time.time() - stopwatch)
+
+    selected_indices = pipeline.algorithm.select_winners(parents_ids)
+    state = pipeline.evolve(state, selected_indices)
+
+    population = pipeline.generate(state)
+    pipeline.visualize_population(
+        population, save_path="static/assets/output", file_name=f"img_{user_id}", save_as_text=True
+    )
+    for i in range(IMAGES_PER_PAGE):
+        if i in parents_ids:
+            continue
+        _run_wfc(output_path="img_{user_id}_{i}.txt",seed=i)
 
 
 def _get_pipeline(wfc=True):
@@ -355,18 +378,18 @@ def _prepare_ruleset():
     print(f"Created {output_folder} rules")
     return
 
-def _run_wfc(layout_input_path,output_path,seed):
+def _run_wfc(layout_input_path=None,output_path=None,seed=42):
     #%% Execute wfc
     rules_file = f"{STATIC_WFC_OUTPUT_PATH}/{WFC_PATH.replace('/','_')[:-4]}/rules.pkl"
     txt_wfc_file = f"{STATIC_WFC_OUTPUT_PATH}/{output_path}.txt"
     image_output = f"static/assets/generated/{output_path}"
 
-    rules = pickle.load(open(rules_file, "rb"))
-    local_weights = wfc.local_weight(BUNDLE, default_weight=1.0,prob_magnitude=BUNDLE_WEIGHT, tile_count=len(rules))
+    if layout_input_path is not None:
+        rules = pickle.load(open(rules_file, "rb"))
+        local_weights = wfc.local_weight(BUNDLE, default_weight=1.0,prob_magnitude=BUNDLE_WEIGHT, tile_count=len(rules))
 
-    layout = _layout_to_array(layout_input_path, LAYOUT_COLORS)
-
-    wfc.wfc([*range(len(rules))], rules, WFC_SIZE, WFC_SIZE,weights=local_weights, path_to_output=txt_wfc_file, layout_map = layout, seed=seed)
+        layout = _layout_to_array(layout_input_path, LAYOUT_COLORS)
+        wfc.wfc([*range(len(rules))], rules, WFC_SIZE, WFC_SIZE,weights=local_weights, path_to_output=txt_wfc_file, layout_map = layout, seed=seed)
     wfc_rule_path = f"{STATIC_WFC_OUTPUT_PATH}/{WFC_PATH.replace('/','_')[:-4]}/"
     visualize_wfc.visualize_wfc(path_folder = wfc_rule_path, input_file = txt_wfc_file, output_file = image_output, SHOW_NUKES = False)
 
