@@ -60,7 +60,7 @@ LAYOUT_COLORS = [
 # Main page layout. When user opens the webpage, this method is called.
 def IndexView(request, version="A"):
     template_name = "index.html"
-    if version not in ["A", "B", "C", "a", "b", "c"]:
+    if version not in ["A", "B", "C","D", "a", "b", "c", "d"]:
         version = "a"
     version = version.upper()
     n = list(map(str, range(IMAGES_PER_PAGE)))
@@ -68,8 +68,8 @@ def IndexView(request, version="A"):
 
     _prepare_ruleset()
     # check if default exists
-    if version == "B":
-        _init_nocppn_population()
+    if version == "B" or version == "D":
+        n = _init_nocppn_population(version)
     elif version == "C":
         user_id = _get_new_user_id(wfc=False)
     else:
@@ -92,11 +92,11 @@ def process_images(request):
         parents_ids = data.get("selected_images", [])
         all_ids = data.get("all_images", [])
         version = data.get("version", "A")
-        if version not in ["A", "B", "C"]:
+        if version not in ["A", "B", "C", "D"]:
             version = "A"
 
-        if version == "B":
-            new_ids = _nocppn_process_imgs(parents_ids, all_ids)
+        if version == "B" or version == "D":
+            new_ids = _nocppn_process_imgs(parents_ids, all_ids,version=version)
             user_id = -2
         elif version == "C":
             user_id = data.get("user_id", -1)
@@ -118,7 +118,7 @@ def process_images(request):
     return JsonResponse({"error": "Invalid request"}, status=400)
 
 
-def _nocppn_process_imgs(parents_ids, all_ids):
+def _nocppn_process_imgs(parents_ids, all_ids, version="B"):
     # get parents from database
     parents = Layout.objects.filter(id__in=parents_ids).values_list("data", flat=True)
     parents = [json.loads(p) for p in parents]
@@ -136,11 +136,11 @@ def _nocppn_process_imgs(parents_ids, all_ids):
         offsprings_ids.append(layout.id)
 
 
-        path_file = f"static/assets/generated/B/img_{layout.id}"
+        path_file = f"static/assets/generated/{version}/img_{layout.id}"
         img_path = imgFromArray(
             offspring, f"{path_file}.png"
         )
-        _run_wfc(img_path,f"B/img_{layout.id}_wfc.png",layout.id)
+        _run_wfc(img_path,f"{version}/img_{layout.id}_wfc.png",layout.id)
         layout.img_path = img_path
         layout.save()
 
@@ -157,8 +157,8 @@ def _nocppn_process_imgs(parents_ids, all_ids):
     ]
     Layout.objects.filter(id__in=delete_ids).delete()
     for id in delete_ids:
-        os.remove(f"static/assets/generated/B/img_{id}.png")
-        os.remove(f"static/assets/generated/B/img_{id}_wfc.png")
+        os.remove(f"static/assets/generated/{version}/img_{id}.png")
+        os.remove(f"static/assets/generated/{version}/img_{id}_wfc.png")
 
     return new_ids
 
@@ -401,39 +401,46 @@ def _get_new_user_id(wfc=True):
     return cppnState.id
 
 
-def _init_nocppn_population():
+def _init_nocppn_population(version="B"):
     # check if default exists
     ok = True
 
+    n = range(IMAGES_PER_PAGE) if version == "B" else range(IMAGES_PER_PAGE, 2*IMAGES_PER_PAGE)
+
     if len(Layout.objects.filter(id__in=range(IMAGES_PER_PAGE))) != IMAGES_PER_PAGE:
         ok = False
-    if not os.path.exists(f"static/assets/generated/B/"):
+    if not os.path.exists(f"static/assets/generated/{version}/"):
         ok = False
-    for i in range(IMAGES_PER_PAGE):
-        if not os.path.exists(f"static/assets/generated/B/img_{i}.png") or not os.path.exists(f"static/assets/generated/B/img_{i}_wfc.png"):
+    for i in n:
+        if not os.path.exists(f"static/assets/generated/{version}/img_{i}.png") or not os.path.exists(f"static/assets/generated/{version}/img_{i}_wfc.png"):
             ok = False
             break
+    n = list(map(str, n))
     if ok:
-        return
+        return n
 
     pipeline = _get_pipeline()
     state = _get_default_state()
-    pop = pipeline.generate(state)
+    if version == "B":
+        pop = pipeline.generate(state)
+    else:
+        pop = _generate_noise((IMAGES_PER_PAGE, LAYOUT_RESOLUTION, LAYOUT_RESOLUTION, 4))
     print(pop.shape)
-    os.makedirs(f"static/assets/generated/B/", exist_ok=True)
-    os.makedirs(f"static/assets/output/B/", exist_ok=True)
+    os.makedirs(f"static/assets/generated/{version}/", exist_ok=True)
+    os.makedirs(f"static/assets/output/{version}/", exist_ok=True)
     pop = jnp.reshape(pop, (IMAGES_PER_PAGE, LAYOUT_RESOLUTION, LAYOUT_RESOLUTION, 4))
+    offset = 0 if version == "B" else IMAGES_PER_PAGE
     for i in range(IMAGES_PER_PAGE):
         layout = Layout(data=json.dumps(pop[i].tolist()), pub_date=timezone.now())
-        layout.id = i
+        layout.id = i + offset
         layout.save()
         img_path = imgFromArray(
-            pop[i], f"static/assets/generated/B/img_{layout.id}.png"
+            pop[i], f"static/assets/generated/{version}/img_{layout.id}.png"
         )
         layout.img_path = img_path
         layout.save()
-        _run_wfc(img_path,f"B/img_{layout.id}_wfc.png",i)
-
+        _run_wfc(img_path,f"{version}/img_{layout.id}_wfc.png",i)
+    return n
 
 def _prepare_ruleset():
     output_folder = WFC_PATH.replace("/", "_")[:-4]
@@ -506,3 +513,9 @@ def _layout_to_array(layout_path, color_map):
             color = img.getpixel((i, j))
             out[i][j] = color_map.index(color)
     return jnp.array(out)
+
+def _generate_noise(shape):
+    pop = np.random.rand(*shape)
+    print(pop.shape)
+    print(pop)
+    return pop
