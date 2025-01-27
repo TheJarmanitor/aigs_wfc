@@ -117,6 +117,26 @@ def process_images(request):
 
     return JsonResponse({"error": "Invalid request"}, status=400)
 
+def delete_images(request):
+    if request.method == "POST":
+        data = json.loads(request.body)  # Parse the incoming JSON
+
+        ids = data.get("ids", [])
+        version = data.get("version", "_")
+        user_id = data.get("user_id", -1)
+        if version not in ["A", "B", "C", "D"] or user_id == -1:
+            return JsonResponse({"error": "Invalid request"}, status=400)
+
+        _delete_ids(version, user_id, ids)
+
+        return JsonResponse(
+            {
+                "message": "Images deleted successfully",
+            }
+        )
+
+    return JsonResponse({"error": "Invalid request"}, status=400)
+
 
 def _nocppn_process_imgs(parents_ids, all_ids, version="B"):
     # get parents from database
@@ -558,6 +578,11 @@ def _run_wfc(layout_input_path=None, output_path=None, seed=42):
         SHOW_NUKES=False,
     )
 
+    try:
+        os.remove(txt_wfc_file)
+    except:
+        pass
+
 
 def _layout_to_array(layout_path, color_map):
     img = Image.open(layout_path)
@@ -575,3 +600,26 @@ def _layout_to_array(layout_path, color_map):
 def _generate_noise(shape):
     pop = np.random.rand(*shape)
     return pop
+
+def _delete_ids(version, user_id, ids):
+    if version=="A":
+        for id in ids:
+            if os.path.exists(f"static/assets/generated/img_X_{user_id}_{id}.png"):
+                os.remove(f"static/assets/generated/img_X_{user_id}_{id}.png")
+            if os.path.exists(f"static/assets/generated/img_X_{user_id}_{id}_wfc.png"):
+                os.remove(f"static/assets/generated/img_X_{user_id}_{id}_wfc.png")
+        CPPNState.objects.filter(id__in=[user_id]).delete()
+    if version=="C":
+        for id in ids:
+            if os.path.exists(f"static/assets/generated/img_Z_{user_id}_{id}.png"):
+                os.remove(f"static/assets/generated/img_Z_{user_id}_{id}.png")
+            if os.path.exists(f"static/assets/generated/img_Z_{user_id}_{id}_wfc.png"):
+                os.remove(f"static/assets/generated/img_Z_{user_id}_{id}_wfc.png")
+        PureCPPNState.objects.filter(id__in=[user_id]).delete()
+    if version=="B":
+        for id in ids:
+            if os.path.exists(f"static/assets/generated/{version}/img_{id}.png"):
+                os.remove(f"static/assets/generated/{version}/img_{id}.png")
+            if os.path.exists(f"static/assets/generated/{version}/img_{id}_wfc.png"):
+                os.remove(f"static/assets/generated/{version}/img_{id}_wfc.png")
+        Layout.objects.filter(id__in=ids).delete()

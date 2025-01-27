@@ -278,6 +278,7 @@ def wfc(tiles, rules, width, height, fixed_tiles=[], weights=None, path_to_outpu
         with open(path, "w") as f:
             for row in fixed[::-1]:
                 f.write(" ".join(str(tiles[cell]) for cell in row) + "\n")
+        return
         with open(path.replace(".txt","_nukelog.txt"), "w") as f:
             for row in nuked_times[::-1]:
                 f.write(" ".join(str(cell) for cell in row) + "\n")

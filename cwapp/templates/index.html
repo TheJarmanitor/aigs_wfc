@@ -167,6 +167,19 @@
     }
 
         function reloadPage(){
+            const csrftoken = '{{ csrf_token }}';
+            fetch("{% url 'cwapp:delete_images' %}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrftoken  // Django's CSRF protection
+                },
+                body: JSON.stringify({
+                    ids: allImages,
+                    version: version,
+                    user_id: user_id
+                })  // Send the selected and all images
+            })
             location.reload();
         }
 
