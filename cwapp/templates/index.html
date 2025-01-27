@@ -1,15 +1,5 @@
 {% load static %}
 <link rel="stylesheet" href="{% static 'assets/style.css' %}" />
-<style>
-    body {
-        background-image: url("{% static 'assets/drog.png' %}");
-        background-color: rgba(255, 255, 255, 0.8);
-        background-size: cover;
-        background-repeat: no-repeat;
-        background-attachment: fixed;
-        background-blend-mode: overlay;
-    }
-</style>
 <div class="main-container">
     <h1>CPPN-NEAT2WFC:<br /><br />{{ version }}</h1>
     <div id="image-container" class="grid-container">
@@ -33,7 +23,7 @@
         {% endif %} {% endfor %}
     </div>
     <div class="button-container">
-        <button onclick="sendSelectedImages()">Mutate</button>
+        <button onclick="sendSelectedImages()" id="button-mutate">Mutate</button>
         <button onclick="downloadSelected()">Save selected images</button>
         <button
             style="margin-left: 2em; background: #c05555"
@@ -41,6 +31,12 @@
         >
             Restart
         </button>
+    </div>
+    <div class="centered-div" id="load-info" style="min-height: 30px; font-size: 24px;margin-top: 1em;"> </div>
+    <div class="centered-div" id="info-container">
+        <p>
+            Select up to 4 images and click "Mutate" to generate new images.
+        </p>
     </div>
 </div>
 
@@ -80,6 +76,14 @@
                 return;
             }
 
+            // Disable the button to prevent multiple clicks
+            button = document.getElementById('button-mutate');
+            button.disabled = true;
+
+            // inform the user
+            const loadInfo = document.getElementById('load-info');
+            loadInfo.innerHTML = 'Loading...';
+
             // Send the selected images using AJAX (or fetch)
             const csrftoken = '{{ csrf_token }}';
             fetch("{% url 'cwapp:process_images' %}", {
@@ -109,6 +113,10 @@
         const newImages = data.new_images;
         const imageContainer = document.getElementById('image-container');
         imageContainer.innerHTML = '';  // Clear old images
+
+        const loadInfo = document.getElementById('load-info');
+        loadInfo.innerHTML = '';  // Clear loading info
+
 
         // Set fixed dimensions to avoid squishing
         const placeholderWidth = 100;  // Adjust according to your image size
@@ -153,6 +161,8 @@
 
         allImages = newImages;
         selectedImages = [];
+        button = document.getElementById('button-mutate');
+        button.disabled = false;
     }
 
         function reloadPage(){

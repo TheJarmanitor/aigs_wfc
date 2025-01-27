@@ -1,10 +1,25 @@
 
 #bundle for local weights
-bundle_dragon_warr=[
+bundle_dragon_warr_island=[
     [0,10],        #land
     [3],  #water
-    [6, 8, 17],    #mountains
+    [6, 17],    #mountains
     [9]         #city
+]
+
+bundle_dragon_warr_sample=[
+    [0, 19],    #land
+    [13],       #water
+    [0, 3, 10],    #mountains
+    [1]     #forest
+]
+
+bundle_dragon_warr_whole=[
+    [4, 19],    #land
+    [0],       #water
+    [10,8,28],    #mountains
+    [6]     #forest
+
 ]
 
 bundle_pokemon_103=[
@@ -35,4 +50,5 @@ bundle_pokemon_123=[
     [82,87],  #path
     [34,50]   #house
 ]
+
 

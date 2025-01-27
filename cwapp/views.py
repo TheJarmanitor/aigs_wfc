@@ -1,3 +1,8 @@
+import os
+import json
+import time
+import base64
+
 from django.shortcuts import render, get_object_or_404
 from django.http import HttpResponse, Http404, HttpResponseRedirect, JsonResponse
 from django.urls import reverse
@@ -6,46 +11,41 @@ from django.template import loader
 from django.views.decorators.csrf import csrf_exempt
 from django.views import generic
 from django.utils import timezone
+from django.core.cache import cache
 
-import json
-import random
-import time
-import os
+import pickle
+from PIL import Image
+import jax.numpy as jnp
+import numpy as np
+import matplotlib.pyplot as plt
+from tensorneat import genome, common
 
 from .models import Layout, CPPNState, PureCPPNState
 
 from cwapp.tools.SimpleGAArrays import GenerateNewPopulation
-from cwapp.tools.SGAA_test import differentTest, imgFromArray
-from django.core.cache import cache
-
-import jax.numpy as jnp
+from cwapp.tools.SGAA_test import imgFromArray
 
 from aigs.interactive_NEAT import InteractiveNEAT
 from aigs.interactive_problem import InteractiveGrid
 from aigs.interactive_pipeline import InteractivePipeline
-from tensorneat import genome, common
-import matplotlib.pyplot as plt
-
-import base64
-import pickle
-
-IMAGES_PER_PAGE = 20
-LAYOUT_RESOLUTION = 64
-HIDDEN_LAYERS = (4, 4, 4)
-
-import numpy as np
 from aigs.tools import rule_split, wfc, visualize_wfc, prepared_bundles
-from PIL import Image
 
 IMAGES_PER_PAGE = 10
 LAYOUT_RESOLUTION = 16
-HIDDEN_LAYERS = (3, 4)
+HIDDEN_LAYERS = (5, 3)
+ACTIVATION_FUNCTIONS = [
+    common.ACT.sigmoid,
+    common.ACT.tanh,
+    common.ACT.sin,
+    common.ACT.relu
+    ]
 
 # WFC settings
 WFC_PATH = "aigs/images/tileset_inputs/dragon_warrior/dragonwarr_island.png"
+#WFC_PATH = "aigs/images/tileset_inputs/dragon_warrior/dragon_warrior_map.png"
 WFC_TILE_SIZE = 16
 BUNDLE_WEIGHT = 100.0
-BUNDLE = prepared_bundles.bundle_dragon_warr
+BUNDLE = prepared_bundles.bundle_dragon_warr_island
 WFC_SIZE = LAYOUT_RESOLUTION
 STATIC_WFC_OUTPUT_PATH = "static/assets/output"
 
@@ -282,7 +282,7 @@ def _get_pipeline(wfc=False):
         if not "cppn_pipeline" in globals():
             test_genome = genome.DefaultGenome(
                 num_inputs=2,
-                num_outputs=18,
+                num_outputs=_prepare_ruleset(),
                 node_gene=genome.DefaultNode(
                     activation_options=[
                         common.ACT.sigmoid,
@@ -291,7 +291,7 @@ def _get_pipeline(wfc=False):
                     ]
                 ),
                 init_hidden_layers=HIDDEN_LAYERS,
-                max_conns=128,
+                max_conns=256,
             )
 
             algo = InteractiveNEAT(
@@ -405,7 +405,7 @@ def _init_nocppn_population(version="B"):
     # check if default exists
     ok = True
 
-    n = range(IMAGES_PER_PAGE) if version == "B" else range(IMAGES_PER_PAGE, 2*IMAGES_PER_PAGE)
+    n = range(IMAGES_PER_PAGE) if version == "D" else range(IMAGES_PER_PAGE, 2*IMAGES_PER_PAGE)
 
     if len(Layout.objects.filter(id__in=range(IMAGES_PER_PAGE))) != IMAGES_PER_PAGE:
         ok = False
@@ -421,7 +421,7 @@ def _init_nocppn_population(version="B"):
 
     pipeline = _get_pipeline()
     state = _get_default_state()
-    if version == "B":
+    if version == "D":
         pop = pipeline.generate(state)
     else:
         pop = _generate_noise((IMAGES_PER_PAGE, LAYOUT_RESOLUTION, LAYOUT_RESOLUTION, 4))
@@ -429,7 +429,7 @@ def _init_nocppn_population(version="B"):
     os.makedirs(f"static/assets/generated/{version}/", exist_ok=True)
     os.makedirs(f"static/assets/output/{version}/", exist_ok=True)
     pop = jnp.reshape(pop, (IMAGES_PER_PAGE, LAYOUT_RESOLUTION, LAYOUT_RESOLUTION, 4))
-    offset = 0 if version == "B" else IMAGES_PER_PAGE
+    offset = 0 if version == "D" else IMAGES_PER_PAGE
     for i in range(IMAGES_PER_PAGE):
         layout = Layout(data=json.dumps(pop[i].tolist()), pub_date=timezone.now())
         layout.id = i + offset
@@ -447,7 +447,8 @@ def _prepare_ruleset():
     if os.path.exists(f"{STATIC_WFC_OUTPUT_PATH}/{output_folder}") and os.path.exists(
         f"{STATIC_WFC_OUTPUT_PATH}/{output_folder}/rules.pkl"
     ):
-        return
+        rules = pickle.load(open(f"{STATIC_WFC_OUTPUT_PATH}/{output_folder}/rules.pkl", "rb"))
+        return len(rules)
     os.makedirs(f"{STATIC_WFC_OUTPUT_PATH}/{output_folder}", exist_ok=True)
 
     print("Preparing ruleset")
@@ -461,7 +462,7 @@ def _prepare_ruleset():
     )
     rules.output_to_folder_rules(output_folder, output_dir=STATIC_WFC_OUTPUT_PATH)
     print(f"Created {output_folder} rules")
-    return
+    return len(rules.tiles)
 
 
 def _run_wfc(layout_input_path=None, output_path=None, seed=42):
@@ -479,7 +480,12 @@ def _run_wfc(layout_input_path=None, output_path=None, seed=42):
             tile_count=len(rules),
         )
 
+        for i in range(len(rules)):
+            print(f"Tile {i}")
+            print(rules[i])
+
         layout = _layout_to_array(layout_input_path, LAYOUT_COLORS)
+
         wfc.wfc(
             [*range(len(rules))],
             rules,
@@ -490,6 +496,7 @@ def _run_wfc(layout_input_path=None, output_path=None, seed=42):
             layout_map=layout,
             seed=seed,
         )
+
     wfc_rule_path = f"{STATIC_WFC_OUTPUT_PATH}/{WFC_PATH.replace('/','_')[:-4]}/"
     visualize_wfc.visualize_wfc(
         path_folder=wfc_rule_path,
@@ -504,14 +511,12 @@ def _layout_to_array(layout_path, color_map):
     img = img.convert("RGB")
 
     color_map = [tuple(c) for c in color_map]
-    print(color_map)
-    print("---------")
 
     out = [[0 for _ in range(LAYOUT_RESOLUTION)] for _ in range(LAYOUT_RESOLUTION)]
     for i in range(LAYOUT_RESOLUTION):
         for j in range(LAYOUT_RESOLUTION):
             color = img.getpixel((i, j))
-            out[i][j] = color_map.index(color)
+            out[j][i] = color_map.index(color)
     return jnp.array(out)
 
 def _generate_noise(shape):

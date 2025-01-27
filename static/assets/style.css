@@ -1,29 +1,31 @@
-
-li a {
-    color: green;
+p {
+    font-size: 24px;
+}
+body {
+    background-color: rgb(197, 197, 197);
+    color: black;
 }
 h1 {
-    color: gray;
     text-align: center;
 }
 
 img {
-    border: 6px solid transparent;
+    border: 8px dashed transparent;
     max-width: 100%; /* Ensures the image doesn't exceed the container width */
     max-height: 100%; /* Ensures the image doesn't exceed the container height */
     object-fit: cover; /* Maintain aspect ratio while covering the grid cell */
 }
 
 img:hover {
-    border: 6px solid yellow;
+    border: 8px dashed yellow;
 }
 
 .selected {
-    border: 6px solid green;
+    border: 8px solid lime;
 }
 
 .selected:hover {
-    border: 6px solid red;
+    border: 8px dashed red;
 }
 
 .grid-container {
@@ -68,4 +70,10 @@ img:hover {
 /* make every other button lighter*/
 .button-container button:nth-child(even) {
     background-color: #f8f8f8;
+}
+
+.centered-div {
+    display: flex;
+    justify-content: center; /* Center the div horizontally */
+    align-items: center; /* Center the div vertically */
 }
