@@ -124,7 +124,7 @@ def delete_images(request):
         ids = data.get("ids", [])
         version = data.get("version", "_")
         user_id = data.get("user_id", -1)
-        if version not in ["A", "B", "C", "D"] or user_id == -1:
+        if version not in ["A", "B", "C", "D"]:
             return JsonResponse({"error": "Invalid request"}, status=400)
 
         _delete_ids(version, user_id, ids)
