@@ -1,7 +1,8 @@
 {% load static %}
+<!DOCTYPE html>
 <link rel="stylesheet" href="{% static 'assets/style.css' %}" />
 <div class="main-container">
-    <h1>CPPN-NEAT2WFC:<br /><br />{{ version }}</h1>
+    <h1>CPPN-NEAT2WFC<br /><br />{{ version }}</h1>
     <div id="image-container" class="grid-container">
 
         {% for i in n %}
@@ -119,8 +120,8 @@
 
 
         // Set fixed dimensions to avoid squishing
-        const placeholderWidth = 100;  // Adjust according to your image size
-        const placeholderHeight = 100; // Adjust according to your image size
+        const placeholderWidth = 256;  // Adjust according to your image size
+        const placeholderHeight = 256; // Adjust according to your image size
 
         if("{{ version }}" == "A" && user_id != data.user_id){
             console.error("User id mismatch: " + user_id + " != " + data.user_id);
@@ -197,3 +198,4 @@
         }
     }
 </script>
+</html>
