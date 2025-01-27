@@ -69,7 +69,7 @@ def IndexView(request, version="A"):
     _prepare_ruleset()
     # check if default exists
     if version == "B" or version == "D":
-        n = _init_nocppn_population(version)
+        n = _init_new_nocppn_population(version=version)
     elif version == "C":
         user_id = _get_new_user_id(wfc=False)
     else:
@@ -168,7 +168,6 @@ def _cppn_process_imgs(user_id, parents_ids):
     if user_id == -1:
         print("ERROR")
         return None
-    stopwatch = time.time()
 
     cppnState = CPPNState.objects.get(id=user_id)
     state = _pickle_loads(cppnState.data)
@@ -176,8 +175,6 @@ def _cppn_process_imgs(user_id, parents_ids):
     pipeline = _get_pipeline()
 
     # render layouts
-
-    print("Time elapsed 1: ", time.time() - stopwatch)
 
     selected_indices = pipeline.algorithm.select_winners(parents_ids)
     state = pipeline.evolve(state, selected_indices)
@@ -199,8 +196,6 @@ def _cppn_process_imgs(user_id, parents_ids):
     cppnState.pub_date = timezone.now()
     cppnState.save()
 
-    print("Time elapsed 2: ", time.time() - stopwatch)
-
     return list(range(IMAGES_PER_PAGE)), user_id
 
 
@@ -208,7 +203,6 @@ def _pure_cppn_procces_imgs(user_id, parents_ids):
     if user_id == -1:
         print("ERROR")
         return None
-    stopwatch = time.time()
 
     cppnState = PureCPPNState.objects.get(id=user_id)
     state = _pickle_loads(cppnState.data)
@@ -216,8 +210,6 @@ def _pure_cppn_procces_imgs(user_id, parents_ids):
     cppn_pipeline = _get_pipeline(wfc=True)
 
     # render layouts
-
-    print("Time elapsed 1: ", time.time() - stopwatch)
 
     selected_indices = cppn_pipeline.algorithm.select_winners(parents_ids)
     state = cppn_pipeline.evolve(state, selected_indices)
@@ -238,7 +230,6 @@ def _pure_cppn_procces_imgs(user_id, parents_ids):
     cppnState.pub_date = timezone.now()
     cppnState.save()
 
-    print("Time elapsed 2: ", time.time() - stopwatch)
 
     return list(range(IMAGES_PER_PAGE)), user_id
 
@@ -341,6 +332,24 @@ def _get_default_state():
 
     return state
 
+def _get_new_state():
+    cppnstate = CPPNState(pub_date=timezone.now())
+    cppnstate.save()
+    user_id = cppnstate.id
+    pipeline = _get_pipeline()
+    state = pipeline.setup()
+    pipeline.seed = user_id
+    population = pipeline.generate(state)
+    pipeline.visualize_population(
+        population, save_path="static/assets/generated", file_name=f"img_X_{user_id}"
+    )
+    for i in range(IMAGES_PER_PAGE):
+        _run_wfc(f"static/assets/generated/img_X_{user_id}_{i}.png", f"img_X_{user_id}_{i}_wfc.png", i)
+    cppnstate.data = _pickle_dumps(state)
+    cppnstate.save()
+
+    return user_id 
+
 
 def _get_cppn_state():
     cppnstate0 = PureCPPNState.objects.filter(id=0)
@@ -377,6 +386,26 @@ def _get_cppn_state():
 
     return state
 
+def _get_new_cppn_state():
+    cppnstate = PureCPPNState(pub_date=timezone.now())
+    cppnstate.save()
+    user_id = cppnstate.id
+    cppn_pipeline = _get_pipeline(wfc=True)
+    cppn_pipeline.seed = user_id
+    state = cppn_pipeline.setup()
+    population = cppn_pipeline.generate(state)
+    cppn_pipeline.visualize_population(
+        population,
+        save_path="static/assets/output",
+        file_name=f"img_Z_{user_id}",
+        save_as_text=True,
+    )
+    for i in range(IMAGES_PER_PAGE):
+        _run_wfc(output_path=f"img_Z_{user_id}_{i}_wfc.png", seed=i)
+    cppnstate.data = _pickle_dumps(state)
+    cppnstate.save()
+    return user_id
+
 
 def _pickle_loads(data):
     return pickle.loads(base64.b64decode(data))
@@ -386,19 +415,25 @@ def _pickle_dumps(data):
     return base64.b64encode(pickle.dumps(data)).decode("utf-8")
 
 
-def _get_new_user_id(wfc=True):
-    if wfc:
-        default_state = _get_default_state()
-        cppnState = CPPNState(
-            data=_pickle_dumps(default_state), pub_date=timezone.now()
-        )
+def _get_new_user_id(wfc=True, deterministic=False):
+    if deterministic:
+        if wfc:
+            default_state = _get_default_state()
+            cppnState = CPPNState(
+                data=_pickle_dumps(default_state), pub_date=timezone.now()
+            )
+        else:
+            default_state = _get_cppn_state()
+            cppnState = PureCPPNState(
+                data=_pickle_dumps(default_state), pub_date=timezone.now()
+            )
+        cppnState.save()
+        return cppnState.id
     else:
-        default_state = _get_cppn_state()
-        cppnState = PureCPPNState(
-            data=_pickle_dumps(default_state), pub_date=timezone.now()
-        )
-    cppnState.save()
-    return cppnState.id
+        if wfc:
+            return _get_new_state()
+        else:
+            return _get_new_cppn_state()
 
 
 def _init_nocppn_population(version="B"):
@@ -425,7 +460,6 @@ def _init_nocppn_population(version="B"):
         pop = pipeline.generate(state)
     else:
         pop = _generate_noise((IMAGES_PER_PAGE, LAYOUT_RESOLUTION, LAYOUT_RESOLUTION, 4))
-    print(pop.shape)
     os.makedirs(f"static/assets/generated/{version}/", exist_ok=True)
     os.makedirs(f"static/assets/output/{version}/", exist_ok=True)
     pop = jnp.reshape(pop, (IMAGES_PER_PAGE, LAYOUT_RESOLUTION, LAYOUT_RESOLUTION, 4))
@@ -442,6 +476,30 @@ def _init_nocppn_population(version="B"):
         _run_wfc(img_path,f"{version}/img_{layout.id}_wfc.png",i)
     return n
 
+def _init_new_nocppn_population(version="B"):
+    pipeline = _get_pipeline()
+    state = _get_default_state()
+    if version == "D":
+        pop = pipeline.generate(state)
+    else:
+        pop = _generate_noise((IMAGES_PER_PAGE, LAYOUT_RESOLUTION, LAYOUT_RESOLUTION, 4))
+    os.makedirs(f"static/assets/generated/{version}/", exist_ok=True)
+    os.makedirs(f"static/assets/output/{version}/", exist_ok=True)
+    pop = jnp.reshape(pop, (IMAGES_PER_PAGE, LAYOUT_RESOLUTION, LAYOUT_RESOLUTION, 4))
+    offset = 0 if version == "D" else IMAGES_PER_PAGE
+    ids = []
+    for i in range(IMAGES_PER_PAGE):
+        layout = Layout(data=json.dumps(pop[i].tolist()), pub_date=timezone.now())
+        layout.save()
+        img_path = imgFromArray(
+            pop[i], f"static/assets/generated/{version}/img_{layout.id}.png"
+        )
+        layout.img_path = img_path
+        layout.save()
+        _run_wfc(img_path,f"{version}/img_{layout.id}_wfc.png",i)
+        ids.append(layout.id)
+    return list(map(str, ids))
+
 def _prepare_ruleset():
     output_folder = WFC_PATH.replace("/", "_")[:-4]
     if os.path.exists(f"{STATIC_WFC_OUTPUT_PATH}/{output_folder}") and os.path.exists(
@@ -451,7 +509,6 @@ def _prepare_ruleset():
         return len(rules)
     os.makedirs(f"{STATIC_WFC_OUTPUT_PATH}/{output_folder}", exist_ok=True)
 
-    print("Preparing ruleset")
 
     img = Image.open(WFC_PATH)
     img = img.convert("RGB")
@@ -479,10 +536,6 @@ def _run_wfc(layout_input_path=None, output_path=None, seed=42):
             prob_magnitude=BUNDLE_WEIGHT,
             tile_count=len(rules),
         )
-
-        for i in range(len(rules)):
-            print(f"Tile {i}")
-            print(rules[i])
 
         layout = _layout_to_array(layout_input_path, LAYOUT_COLORS)
 
@@ -521,6 +574,4 @@ def _layout_to_array(layout_path, color_map):
 
 def _generate_noise(shape):
     pop = np.random.rand(*shape)
-    print(pop.shape)
-    print(pop)
     return pop

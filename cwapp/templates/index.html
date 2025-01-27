@@ -11,9 +11,9 @@
         {% else %}
         <img
             {% if version == "A" %}
-            src="{% static 'assets/generated/img_' %}X_{{i}}_wfc.png"
+            src="{% static 'assets/generated/img_' %}X_{{user_id}}_{{i}}_wfc.png"
             {% else %}
-            src="{% static 'assets/generated/img_' %}Z_{{i}}_wfc.png"
+            src="{% static 'assets/generated/img_' %}Z_{{user_id}}_{{i}}_wfc.png"
             {% endif %}
             id="image-{{i}}"
             data-id="{{i}}"
