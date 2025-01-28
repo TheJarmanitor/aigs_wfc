@@ -203,6 +203,9 @@ def _cppn_process_imgs(user_id, parents_ids):
     pipeline.visualize_population(
         population, save_path="static/assets/generated", file_name=f"img_X_{user_id}"
     )
+
+     #Save svgs
+    _state_to_svg(state, population, pipeline.algorithm.genome, "static/assets/generated")
     for i in range(IMAGES_PER_PAGE):
         if i in parents_ids:
             continue
@@ -623,3 +626,15 @@ def _delete_ids(version, user_id, ids):
             if os.path.exists(f"static/assets/generated/{version}/img_{id}_wfc.png"):
                 os.remove(f"static/assets/generated/{version}/img_{id}_wfc.png")
         Layout.objects.filter(id__in=ids).delete()
+    
+def _state_to_svg(state, pop, genome, path):
+    from aigs.tools.visualize_labeled import visualize_labeled, network_dict
+    act_labels = ["SGM", "TANH", "SIN", "RELU", "ID"]
+    for i in range(IMAGES_PER_PAGE):
+        print(pop[0][jnp.array([i])])
+        print("-------------")
+        print(pop[1][jnp.array([i])])
+        network = network_dict(genome, state, pop[0][jnp.array([i])], pop[1][jnp.array([i])])
+        visualize_labeled(genome, network,act_labels, rotate=90, save_path=f"{path}/img_X_nn_{i}.svg")
+
+
