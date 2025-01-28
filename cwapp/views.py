@@ -30,14 +30,20 @@ from aigs.interactive_problem import InteractiveGrid
 from aigs.interactive_pipeline import InteractivePipeline
 from aigs.tools import rule_split, wfc, visualize_wfc, prepared_bundles
 
+
+# custom activation functions
+def gaussian_(z): 
+    return 1 / (jnp.std(z) * jnp.sqrt(2*jnp.pi)) * jnp.exp(-(z-jnp.mean(z))**2 / (2 * jnp.var(z)))
+
 IMAGES_PER_PAGE = 10
 LAYOUT_RESOLUTION = 16
-HIDDEN_LAYERS = (5, 3)
+HIDDEN_LAYERS = (3,)
 ACTIVATION_FUNCTIONS = [
     common.ACT.sigmoid,
     common.ACT.tanh,
     common.ACT.sin,
-    common.ACT.relu
+    gaussian_,
+    common.ACT.identity,
     ]
 
 # WFC settings
@@ -55,6 +61,7 @@ LAYOUT_COLORS = [
     [85, 10, 10],  # mountains
     [211, 26, 26],  # city
 ]
+
 
 
 # Main page layout. When user opens the webpage, this method is called.
