@@ -37,12 +37,12 @@ ACTIVATION_FUNCTIONS = [
     common.ACT.sigmoid,
     common.ACT.tanh,
     common.ACT.sin,
-    common.ACT.relu
-    ]
+    common.ACT.relu,
+]
 
 # WFC settings
 WFC_PATH = "aigs/images/tileset_inputs/dragon_warrior/dragonwarr_island.png"
-#WFC_PATH = "aigs/images/tileset_inputs/dragon_warrior/dragon_warrior_map.png"
+# WFC_PATH = "aigs/images/tileset_inputs/dragon_warrior/dragon_warrior_map.png"
 WFC_TILE_SIZE = 16
 BUNDLE_WEIGHT = 100.0
 BUNDLE = prepared_bundles.bundle_dragon_warr_island
@@ -60,7 +60,7 @@ LAYOUT_COLORS = [
 # Main page layout. When user opens the webpage, this method is called.
 def IndexView(request, version="A"):
     template_name = "index.html"
-    if version not in ["A", "B", "C","D", "a", "b", "c", "d"]:
+    if version not in ["A", "B", "C", "D", "a", "b", "c", "d"]:
         version = "a"
     version = version.upper()
     n = list(map(str, range(IMAGES_PER_PAGE)))
@@ -96,7 +96,7 @@ def process_images(request):
             version = "A"
 
         if version == "B" or version == "D":
-            new_ids = _nocppn_process_imgs(parents_ids, all_ids,version=version)
+            new_ids = _nocppn_process_imgs(parents_ids, all_ids, version=version)
             user_id = -2
         elif version == "C":
             user_id = data.get("user_id", -1)
@@ -116,6 +116,7 @@ def process_images(request):
         )
 
     return JsonResponse({"error": "Invalid request"}, status=400)
+
 
 def delete_images(request):
     if request.method == "POST":
@@ -155,12 +156,9 @@ def _nocppn_process_imgs(parents_ids, all_ids, version="B"):
         layout.save()
         offsprings_ids.append(layout.id)
 
-
         path_file = f"static/assets/generated/{version}/img_{layout.id}"
-        img_path = imgFromArray(
-            offspring, f"{path_file}.png"
-        )
-        _run_wfc(img_path,f"{version}/img_{layout.id}_wfc.png",layout.id)
+        img_path = imgFromArray(offspring, f"{path_file}.png")
+        _run_wfc(img_path, f"{version}/img_{layout.id}_wfc.png", layout.id)
         layout.img_path = img_path
         layout.save()
 
@@ -199,13 +197,15 @@ def _cppn_process_imgs(user_id, parents_ids):
     selected_indices = pipeline.algorithm.select_winners(parents_ids)
     state = pipeline.evolve(state, selected_indices)
 
-    population = pipeline.generate(state)
+    population, predict = pipeline.generate(state)
     pipeline.visualize_population(
-        population, save_path="static/assets/generated", file_name=f"img_X_{user_id}"
+        predict, save_path="static/assets/generated", file_name=f"img_X_{user_id}"
     )
 
-     #Save svgs
-    _state_to_svg(state, population, pipeline.algorithm.genome, "static/assets/generated")
+    # Save svgs
+    _state_to_svg(
+        state, population, pipeline.algorithm.genome, "static/assets/generated"
+    )
     for i in range(IMAGES_PER_PAGE):
         if i in parents_ids:
             continue
@@ -237,9 +237,9 @@ def _pure_cppn_procces_imgs(user_id, parents_ids):
     selected_indices = cppn_pipeline.algorithm.select_winners(parents_ids)
     state = cppn_pipeline.evolve(state, selected_indices)
 
-    population = cppn_pipeline.generate(state)
+    population, predict = cppn_pipeline.generate(state)
     cppn_pipeline.visualize_population(
-        population,
+        predict,
         save_path="static/assets/output",
         file_name=f"img_Z_{user_id}",
         save_as_text=True,
@@ -252,7 +252,6 @@ def _pure_cppn_procces_imgs(user_id, parents_ids):
     cppnState.data = _pickle_dumps(state)
     cppnState.pub_date = timezone.now()
     cppnState.save()
-
 
     return list(range(IMAGES_PER_PAGE)), user_id
 
@@ -334,9 +333,9 @@ def _get_default_state():
 
     pipeline = _get_pipeline()
     state = pipeline.setup()
-    population = pipeline.generate(state)
+    population, predict = pipeline.generate(state)
     pipeline.visualize_population(
-        population, save_path="static/assets/generated", file_name=f"img_X"
+        predict, save_path="static/assets/generated", file_name=f"img_X"
     )
     for i in range(IMAGES_PER_PAGE):
         _run_wfc(f"static/assets/generated/img_X_{i}.png", f"img_X_{i}_wfc.png", i)
@@ -355,6 +354,7 @@ def _get_default_state():
 
     return state
 
+
 def _get_new_state():
     cppnstate = CPPNState(pub_date=timezone.now())
     cppnstate.save()
@@ -362,16 +362,20 @@ def _get_new_state():
     pipeline = _get_pipeline()
     state = pipeline.setup()
     pipeline.seed = user_id
-    population = pipeline.generate(state)
+    population, predict = pipeline.generate(state)
     pipeline.visualize_population(
-        population, save_path="static/assets/generated", file_name=f"img_X_{user_id}"
+        predict, save_path="static/assets/generated", file_name=f"img_X_{user_id}"
     )
     for i in range(IMAGES_PER_PAGE):
-        _run_wfc(f"static/assets/generated/img_X_{user_id}_{i}.png", f"img_X_{user_id}_{i}_wfc.png", i)
+        _run_wfc(
+            f"static/assets/generated/img_X_{user_id}_{i}.png",
+            f"img_X_{user_id}_{i}_wfc.png",
+            i,
+        )
     cppnstate.data = _pickle_dumps(state)
     cppnstate.save()
 
-    return user_id 
+    return user_id
 
 
 def _get_cppn_state():
@@ -385,9 +389,9 @@ def _get_cppn_state():
 
     cppn_pipeline = _get_pipeline(wfc=True)
     state = cppn_pipeline.setup()
-    population = cppn_pipeline.generate(state)
+    population, predict = cppn_pipeline.generate(state)
     cppn_pipeline.visualize_population(
-        population,
+        predict,
         save_path="static/assets/output",
         file_name=f"img_Z",
         save_as_text=True,
@@ -409,6 +413,7 @@ def _get_cppn_state():
 
     return state
 
+
 def _get_new_cppn_state():
     cppnstate = PureCPPNState(pub_date=timezone.now())
     cppnstate.save()
@@ -416,9 +421,9 @@ def _get_new_cppn_state():
     cppn_pipeline = _get_pipeline(wfc=True)
     cppn_pipeline.seed = user_id
     state = cppn_pipeline.setup()
-    population = cppn_pipeline.generate(state)
+    population, predict = cppn_pipeline.generate(state)
     cppn_pipeline.visualize_population(
-        population,
+        predict,
         save_path="static/assets/output",
         file_name=f"img_Z_{user_id}",
         save_as_text=True,
@@ -463,14 +468,20 @@ def _init_nocppn_population(version="B"):
     # check if default exists
     ok = True
 
-    n = range(IMAGES_PER_PAGE) if version == "D" else range(IMAGES_PER_PAGE, 2*IMAGES_PER_PAGE)
+    n = (
+        range(IMAGES_PER_PAGE)
+        if version == "D"
+        else range(IMAGES_PER_PAGE, 2 * IMAGES_PER_PAGE)
+    )
 
     if len(Layout.objects.filter(id__in=range(IMAGES_PER_PAGE))) != IMAGES_PER_PAGE:
         ok = False
     if not os.path.exists(f"static/assets/generated/{version}/"):
         ok = False
     for i in n:
-        if not os.path.exists(f"static/assets/generated/{version}/img_{i}.png") or not os.path.exists(f"static/assets/generated/{version}/img_{i}_wfc.png"):
+        if not os.path.exists(
+            f"static/assets/generated/{version}/img_{i}.png"
+        ) or not os.path.exists(f"static/assets/generated/{version}/img_{i}_wfc.png"):
             ok = False
             break
     n = list(map(str, n))
@@ -480,9 +491,11 @@ def _init_nocppn_population(version="B"):
     pipeline = _get_pipeline()
     state = _get_default_state()
     if version == "D":
-        pop = pipeline.generate(state)
+        _, pop = pipeline.generate(state)
     else:
-        pop = _generate_noise((IMAGES_PER_PAGE, LAYOUT_RESOLUTION, LAYOUT_RESOLUTION, 4))
+        pop = _generate_noise(
+            (IMAGES_PER_PAGE, LAYOUT_RESOLUTION, LAYOUT_RESOLUTION, 4)
+        )
     os.makedirs(f"static/assets/generated/{version}/", exist_ok=True)
     os.makedirs(f"static/assets/output/{version}/", exist_ok=True)
     pop = jnp.reshape(pop, (IMAGES_PER_PAGE, LAYOUT_RESOLUTION, LAYOUT_RESOLUTION, 4))
@@ -496,16 +509,19 @@ def _init_nocppn_population(version="B"):
         )
         layout.img_path = img_path
         layout.save()
-        _run_wfc(img_path,f"{version}/img_{layout.id}_wfc.png",i)
+        _run_wfc(img_path, f"{version}/img_{layout.id}_wfc.png", i)
     return n
+
 
 def _init_new_nocppn_population(version="B"):
     pipeline = _get_pipeline()
     state = _get_default_state()
     if version == "D":
-        pop = pipeline.generate(state)
+        _, pop = pipeline.generate(state)
     else:
-        pop = _generate_noise((IMAGES_PER_PAGE, LAYOUT_RESOLUTION, LAYOUT_RESOLUTION, 4))
+        pop = _generate_noise(
+            (IMAGES_PER_PAGE, LAYOUT_RESOLUTION, LAYOUT_RESOLUTION, 4)
+        )
     os.makedirs(f"static/assets/generated/{version}/", exist_ok=True)
     os.makedirs(f"static/assets/output/{version}/", exist_ok=True)
     pop = jnp.reshape(pop, (IMAGES_PER_PAGE, LAYOUT_RESOLUTION, LAYOUT_RESOLUTION, 4))
@@ -519,19 +535,21 @@ def _init_new_nocppn_population(version="B"):
         )
         layout.img_path = img_path
         layout.save()
-        _run_wfc(img_path,f"{version}/img_{layout.id}_wfc.png",i)
+        _run_wfc(img_path, f"{version}/img_{layout.id}_wfc.png", i)
         ids.append(layout.id)
     return list(map(str, ids))
+
 
 def _prepare_ruleset():
     output_folder = WFC_PATH.replace("/", "_")[:-4]
     if os.path.exists(f"{STATIC_WFC_OUTPUT_PATH}/{output_folder}") and os.path.exists(
         f"{STATIC_WFC_OUTPUT_PATH}/{output_folder}/rules.pkl"
     ):
-        rules = pickle.load(open(f"{STATIC_WFC_OUTPUT_PATH}/{output_folder}/rules.pkl", "rb"))
+        rules = pickle.load(
+            open(f"{STATIC_WFC_OUTPUT_PATH}/{output_folder}/rules.pkl", "rb")
+        )
         return len(rules)
     os.makedirs(f"{STATIC_WFC_OUTPUT_PATH}/{output_folder}", exist_ok=True)
-
 
     img = Image.open(WFC_PATH)
     img = img.convert("RGB")
@@ -600,41 +618,45 @@ def _layout_to_array(layout_path, color_map):
             out[j][i] = color_map.index(color)
     return jnp.array(out)
 
+
 def _generate_noise(shape):
     pop = np.random.rand(*shape)
     return pop
 
+
 def _delete_ids(version, user_id, ids):
-    if version=="A":
+    if version == "A":
         for id in ids:
             if os.path.exists(f"static/assets/generated/img_X_{user_id}_{id}.png"):
                 os.remove(f"static/assets/generated/img_X_{user_id}_{id}.png")
             if os.path.exists(f"static/assets/generated/img_X_{user_id}_{id}_wfc.png"):
                 os.remove(f"static/assets/generated/img_X_{user_id}_{id}_wfc.png")
         CPPNState.objects.filter(id__in=[user_id]).delete()
-    if version=="C":
+    if version == "C":
         for id in ids:
             if os.path.exists(f"static/assets/generated/img_Z_{user_id}_{id}.png"):
                 os.remove(f"static/assets/generated/img_Z_{user_id}_{id}.png")
             if os.path.exists(f"static/assets/generated/img_Z_{user_id}_{id}_wfc.png"):
                 os.remove(f"static/assets/generated/img_Z_{user_id}_{id}_wfc.png")
         PureCPPNState.objects.filter(id__in=[user_id]).delete()
-    if version=="B":
+    if version == "B":
         for id in ids:
             if os.path.exists(f"static/assets/generated/{version}/img_{id}.png"):
                 os.remove(f"static/assets/generated/{version}/img_{id}.png")
             if os.path.exists(f"static/assets/generated/{version}/img_{id}_wfc.png"):
                 os.remove(f"static/assets/generated/{version}/img_{id}_wfc.png")
         Layout.objects.filter(id__in=ids).delete()
-    
+
+
 def _state_to_svg(state, pop, genome, path):
     from aigs.tools.visualize_labeled import visualize_labeled, network_dict
+
     act_labels = ["SGM", "TANH", "SIN", "RELU", "ID"]
     for i in range(IMAGES_PER_PAGE):
-        print(pop[0][jnp.array([i])])
-        print("-------------")
-        print(pop[1][jnp.array([i])])
-        network = network_dict(genome, state, pop[0][jnp.array([i])], pop[1][jnp.array([i])])
-        visualize_labeled(genome, network,act_labels, rotate=90, save_path=f"{path}/img_X_nn_{i}.svg")
-
-
+        # print(pop[0][i])
+        # print("-------------")
+        # print(pop[1][i])
+        network = network_dict(genome, state, pop[0][i], pop[1][i])
+        visualize_labeled(
+            genome, network, act_labels, rotate=90, save_path=f"{path}/img_X_nn_{i}.svg"
+        )

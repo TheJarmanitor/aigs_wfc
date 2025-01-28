@@ -65,7 +65,7 @@ class InteractivePipeline(StatefulBaseClass):
         predict = vmap(self.problem.evaluate, in_axes=(None, None, 0))(
             state, self.algorithm.forward, pop_transformed
         )
-        return predict
+        return pop, predict
 
     def evolve(self, state, selected_indices):
         state = self.algorithm.tell(state, selected_indices)
