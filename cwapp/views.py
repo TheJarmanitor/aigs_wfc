@@ -32,7 +32,7 @@ from aigs.tools import rule_split, wfc, visualize_wfc, prepared_bundles
 
 IMAGES_PER_PAGE = 10
 LAYOUT_RESOLUTION = 16
-HIDDEN_LAYERS = (5, 3)
+HIDDEN_LAYERS = (3, )
 ACTIVATION_FUNCTIONS = [
     common.ACT.sigmoid,
     common.ACT.tanh,
@@ -651,12 +651,12 @@ def _delete_ids(version, user_id, ids):
 def _state_to_svg(state, pop, genome, path):
     from aigs.tools.visualize_labeled import visualize_labeled, network_dict
 
-    act_labels = ["SGM", "TANH", "SIN", "RELU", "ID"]
+    act_labels = ["SGM", "TANH", "SIN", "RELU"]
     for i in range(IMAGES_PER_PAGE):
         # print(pop[0][i])
         # print("-------------")
         # print(pop[1][i])
         network = network_dict(genome, state, pop[0][i], pop[1][i])
         visualize_labeled(
-            genome, network, act_labels, rotate=90, save_path=f"{path}/img_X_nn_{i}.svg"
+            genome, network, act_labels, rotate=90, save_path=f"{path}/img_X_nn_{i}.svg", with_labels=True
         )

@@ -1,5 +1,6 @@
 import numpy as np
 import networkx as nx
+import matplotlib
 from matplotlib import pyplot as plt
 from math import isnan
 
@@ -31,6 +32,7 @@ def visualize_labeled(
         conns_list = list(network["conns"])
         input_idx = genome.get_input_idx()
         output_idx = genome.get_output_idx()
+        #print(network)
 
         topo_order, topo_layers = network["topo_order"], network["topo_layers"]
         node2layer = {
@@ -57,10 +59,11 @@ def visualize_labeled(
                 G.add_node(node, subset=node2layer[node], size=size[2], color=color[2])
             else:
                 G.add_node(node, subset=node2layer[node], size=size[1], color=color[1])
-            #print(network["nodes_data"][node])
-            if activation_functions is not None and not isnan(network["nodes_data"][node][4]) \
+            #print(network["nodes"][node])
+            index = topo_order.index(node)
+            if activation_functions is not None and not isnan(network["nodes_data"][index][4]) \
                 and node not in input_idx and node not in output_idx:
-                act_name = activation_functions_dict[int(network["nodes_data"][node][4])]
+                act_name = activation_functions_dict[int(network["nodes_data"][index][4])]
                 custom_labels[node] = f"{node}\n{act_name}"
             else:
                 custom_labels[node] =  f"{node}"
@@ -88,8 +91,12 @@ def visualize_labeled(
 
         node_sizes = [n["size"] for n in G.nodes.values()]
         node_colors = [n["color"] for n in G.nodes.values()]
-
-        plt.clf()
+        try:
+            plt.clf()
+            plt.close()
+        except:
+            plt.
+        print(custom_labels)
         nx.draw(
             G,
             pos=rotated_pos,
