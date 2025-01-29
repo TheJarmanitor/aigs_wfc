@@ -638,3 +638,6 @@ static/assets/generated/*
 static/assets/output/*
 !static/assets/output/.gitkeep
 db.sqlite3
+
+#plots and stuff
+*.pdf
