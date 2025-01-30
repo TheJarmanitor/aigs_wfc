@@ -1,0 +1,214 @@
+{% load static %}
+<!DOCTYPE html>
+<link rel="stylesheet" href="{% static 'assets/style.css' %}" />
+<div class="main-container">
+    <h1>CPPN-NEAT2WFC<br /><br />{{ version }}</h1>
+    <div id="image-container" class="grid-container">
+
+        {% for i in n %}
+        {% if version == "B" or version == "D" %}
+        <img src="{% static 'assets/generated/' %}{{version}}/img_{{i}}_wfc.png" id="image-{{i}}" data-id={{i}} class="clickable-image" alt="Django image" onclick="toggleImageSelection(this)">
+        {% else %}
+        <img
+            {% if version == "A" %}
+            src="{% static 'assets/generated/img_' %}X_{{user_id}}_{{i}}_wfc.png"
+            {% else %}
+            src="{% static 'assets/generated/img_' %}Z_{{user_id}}_{{i}}_wfc.png"
+            {% endif %}
+            id="image-{{i}}"
+            data-id="{{i}}"
+            class="clickable-image"
+            alt="Django image"
+            onclick="toggleImageSelection(this)"
+        />
+        {% endif %} {% endfor %}
+    </div>
+    <div class="button-container">
+        <button onclick="sendSelectedImages()" id="button-mutate">Mutate</button>
+        <button onclick="downloadSelected()">Save selected images</button>
+        <button
+            style="margin-left: 2em; background: #c05555"
+            onclick="reloadPage()"
+        >
+            Restart
+        </button>
+    </div>
+    <div class="centered-div" id="load-info" style="min-height: 30px; font-size: 24px;margin-top: 1em;"> </div>
+    <div class="centered-div" id="info-container">
+        <p>
+            Select up to 4 images and click "Mutate" to generate new images.
+        </p>
+    </div>
+</div>
+
+<script>
+        // Array to hold selected image IDs
+        let selectedImages = [];
+        let allImages = {{ n|safe }};
+        const maxSelectedImages = 4;  // Maximum number of images that can be selected
+        const version = "{{ version }}";
+        const user_id = {{ user_id }};
+
+        // Function to toggle selection of an image
+        function toggleImageSelection(imageElement) {
+            const imageId = imageElement.getAttribute('data-id');
+
+            if (selectedImages.includes(imageId)) {
+                // Deselect the image (remove from selected images array)
+                selectedImages = selectedImages.filter(id => id !== imageId);
+                imageElement.classList.remove('selected');
+            } else {
+                // Select the image (add to selected images array)
+                selectedImages.push(imageId);
+                imageElement.classList.add('selected');
+                if (selectedImages.length > maxSelectedImages) {
+                    const idToRemove = selectedImages.shift();
+                    const imageToRemove = document.getElementById('image-' + idToRemove);
+                    imageToRemove.classList.remove('selected');
+                }
+
+            }
+        }
+
+        // Function to send the selected images to the server
+        function sendSelectedImages() {
+            if (selectedImages.length === 0) {
+                alert('Please select at least one image.');
+                return;
+            }
+
+            // Disable the button to prevent multiple clicks
+            button = document.getElementById('button-mutate');
+            button.disabled = true;
+
+            // inform the user
+            const loadInfo = document.getElementById('load-info');
+            loadInfo.innerHTML = 'Loading...';
+
+            // Send the selected images using AJAX (or fetch)
+            const csrftoken = '{{ csrf_token }}';
+            fetch("{% url 'cwapp:process_images' %}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrftoken  // Django's CSRF protection
+                },
+                body: JSON.stringify({
+                    selected_images: selectedImages,
+                    all_images: allImages,
+                    version: version,
+                    user_id: user_id
+                })  // Send the selected and all images
+            })
+            .then(response => response.json())
+            .then(data => {
+                // Dynamically update the images with the new ones
+                updateImages(data);
+            })
+            .catch(error => {
+                console.error('Error:', error);
+        });
+    }
+
+    function updateImages(data) {
+        const newImages = data.new_images;
+        const imageContainer = document.getElementById('image-container');
+        imageContainer.innerHTML = '';  // Clear old images
+
+        const loadInfo = document.getElementById('load-info');
+        loadInfo.innerHTML = '';  // Clear loading info
+
+
+        // Set fixed dimensions to avoid squishing
+        const placeholderWidth = 256;  // Adjust according to your image size
+        const placeholderHeight = 256; // Adjust according to your image size
+
+        if("{{ version }}" == "A" && user_id != data.user_id){
+            console.error("User id mismatch: " + user_id + " != " + data.user_id);
+        }
+
+        // Add new images dynamically
+        newImages.forEach((index) => {
+            const img = document.createElement('img');
+            if ("{{ version }}" == "B" || "{{ version }}" == "D"){
+                img.src = "{% static 'assets/generated/' %}{{ version }}/img_" + index + "_wfc.png";
+            }
+            else{
+                console.log("user id: " + user_id);
+                const version_img_code = "{{ version }}" == "A" ? "X" : "Z";
+                img.src = "{% static 'assets/generated/img_' %}" + version_img_code + '_'
+                 + user_id + '_' + index + "_wfc.png";
+            }
+            img.alt = 'Generated Image ' + index;
+            img.classList.add('image');
+            img.id = 'image-' + index;
+            img.setAttribute('data-id', index);
+            img.style.width = placeholderWidth + 'px';  // Set the placeholder width
+            img.style.height = placeholderHeight + 'px';  // Set the placeholder height
+            img.onclick = function() { toggleImageSelection(img); };  // Bind the click event
+
+            // Once the image is loaded, adjust its dimensions automatically
+            img.onload = function() {
+                img.style.width = '';  // Remove inline width to allow natural size
+                img.style.height = ''; // Remove inline height to allow natural size
+            };
+
+            imageContainer.appendChild(img);
+
+            //refatch image, bcs the name of src is same and it wouldnt be updated
+            if ("{{ version }}" == "A" || "{{ version }}" == "C")
+                refetchImage(img.id, img.src);
+        });
+
+        allImages = newImages;
+        selectedImages = [];
+        button = document.getElementById('button-mutate');
+        button.disabled = false;
+    }
+
+        function reloadPage(){
+            const csrftoken = '{{ csrf_token }}';
+            fetch("{% url 'cwapp:delete_images' %}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrftoken  // Django's CSRF protection
+                },
+                body: JSON.stringify({
+                    ids: allImages,
+                    version: version,
+                    user_id: user_id
+                })  // Send the selected and all images
+            })
+            location.reload();
+        }
+
+        function downloadSelected(){
+            // Download images
+            const selectedImages = document.querySelectorAll('.selected');
+            selectedImages.forEach((img) => {
+                const imageId = img.getAttribute('data-id');
+                const imageUrl = img.src;
+                const link = document.createElement('a');
+                link.href = imageUrl;
+                link.download = 'image_' + imageId + '.png';
+                link.click();
+            });
+
+
+        }
+
+        function refetchImage(imageId, imageUrl) {
+        // Get the current image element by its ID
+        const imageElement = document.getElementById(imageId);
+
+        if (imageElement) {
+            // Append a timestamp to the image URL to force re-fetching
+            const timestamp = new Date().getTime();
+            imageElement.src = `${imageUrl}?t=${timestamp}`;
+        } else {
+            console.error("Image element not found!");
+        }
+    }
+</script>
+</html>

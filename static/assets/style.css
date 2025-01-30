@@ -1,0 +1,79 @@
+p {
+    font-size: 24px;
+}
+body {
+    background-color: rgb(197, 197, 197);
+    color: black;
+}
+h1 {
+    text-align: center;
+}
+
+img {
+    border: 8px dashed transparent;
+    max-width: 100%; /* Ensures the image doesn't exceed the container width */
+    max-height: 100%; /* Ensures the image doesn't exceed the container height */
+    object-fit: cover; /* Maintain aspect ratio while covering the grid cell */
+}
+
+img:hover {
+    border: 8px dashed yellow;
+}
+
+.selected {
+    border: 8px solid lime;
+}
+
+.selected:hover {
+    border: 8px dashed red;
+}
+
+.grid-container {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr); /* Create 3 equal-width columns */
+    gap: 14px; /* Add space between images */
+    justify-items: center; /* Center images horizontally */
+    align-items: center; /* Center images vertically */
+    margin: 2em;
+}
+
+.grid-container div {
+    width: 100px; /* Set a fixed width for each grid cell */
+    height: 100px; /* Set a fixed height for each grid cell */
+    overflow: hidden; /* Hide overflow if the image is larger than the grid cell */
+}
+
+.main-container {
+    align-self: center; /* Center the main container vertically */
+    justify-self: center; /* Center the main container horizontally */
+    width: auto
+}
+
+.button-container {
+    display: flex;
+    justify-content: center; /* Center the buttons horizontally */
+    gap: 6px; /* Add space between buttons */
+}
+
+.button-container button {
+    padding: 6px 12px; /* Add padding to the buttons */
+    border: 1px solid black; /* Remove the default button border */
+    background-color: #f0f0f0; /* Set the default button background color */
+    cursor: pointer; /* Change the cursor to a pointer on hover */
+}
+
+/* make every other button darker*/
+.button-container button:nth-child(odd) {
+    background-color: #f0f0f0;
+}
+
+/* make every other button lighter*/
+.button-container button:nth-child(even) {
+    background-color: #f8f8f8;
+}
+
+.centered-div {
+    display: flex;
+    justify-content: center; /* Center the div horizontally */
+    align-items: center; /* Center the div vertically */
+}

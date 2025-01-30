@@ -1,13 +1,23 @@
 
+CPPN2WFC Pipeline for Map generation
+
 Tested with python 3.11
 
 install dependencies with ```pip install -r requirements.txt```.
 CPU version defined by default. If GPU is to be used, install with ```pip install -U "jax[cuda12]"```
 
 
-How to run current pipeline:
+How to run Django App:
 1. Be in ...\aigs_wfc\ folder
-2. command: 'py run.py'
+2. migration command: 'python manage.py migrate'
+3. deplot app in local: 'python manage.py migrate'
+
+The main page should send an error. The appropriate page needs to be run
+There are three versions of the app, each with their respective page:
+
+- Version A: The original pipeline. The page is /cppn-wfc/version=A/
+- Version B: direct WFC encodings and Genetic Algorithms. The page is /cppn-wfc/version=B/
+- Version C: Pure CPPN. The page is /cppn-wfc/version=C/
 
 
 <details>
