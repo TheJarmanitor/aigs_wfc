@@ -60,50 +60,50 @@ res = stats.wilcoxon(
     df_answers["difficulty_in_guidance_B"],
     alternative="greater",
 )
-print(f"Difficulty A vs B: {res.pvalue:.2f}")
+print(f"Difficulty A vs B: {res.pvalue:.3f}")
 res = stats.wilcoxon(
     df_answers["local_patterns_A"],
     df_answers["local_patterns_B"],
     alternative="less",
 )
-print(f"Local A vs B: {res.pvalue:.2f}")
+print(f"Local A vs B: {res.pvalue:.3f}")
 res = stats.wilcoxon(
     df_answers["global_pattern_A"],
     df_answers["global_pattern_B"],
     alternative="greater",
 )
-print(f"Global A vs B: {res.pvalue:.2f}")
+print(f"Global A vs B: {res.pvalue:.3f}")
 res = stats.wilcoxon(
     df_answers["similarity_to_game_A"],
     df_answers["similarity_to_game_B"],
     alternative="greater",
 )
-print(f"Similarity A vs B: {res.pvalue:.2f}")
+print(f"Similarity A vs B: {res.pvalue:.3f}")
 # %%
 res = stats.wilcoxon(
     df_answers["difficulty_in_guidance_A"],
     df_answers["difficulty_in_guidance_C"],
     alternative="greater",
 )
-print(f"Difficulty A vs C: {res.pvalue:.2f}")
+print(f"Difficulty A vs C: {res.pvalue:.3f}")
 res = stats.wilcoxon(
     df_answers["local_patterns_A"],
     df_answers["local_patterns_C"],
     alternative="greater",
 )
-print(f"Local A vs C: {res.pvalue:.2f}")
+print(f"Local A vs C: {res.pvalue:.3f}")
 res = stats.wilcoxon(
     df_answers["global_pattern_A"],
     df_answers["global_pattern_C"],
     alternative="less",
 )
-print(f"Global A vs C: {res.pvalue:.2f}")
+print(f"Global A vs C: {res.pvalue:.3f}")
 res = stats.wilcoxon(
     df_answers["similarity_to_game_A"],
     df_answers["similarity_to_game_C"],
     alternative="greater",
 )
-print(f"Similarity A vs C: {res.pvalue:.2f}")
+print(f"Similarity A vs C: {res.pvalue:.3f}")
 
 # %%
 res = stats.wilcoxon(
@@ -111,22 +111,22 @@ res = stats.wilcoxon(
     df_answers["difficulty_in_guidance_C"],
     alternative="less",
 )
-print(f"Difficulty B vs C: {res.pvalue:.2f}")
+print(f"Difficulty B vs C: {res.pvalue:.3f}")
 res = stats.wilcoxon(
     df_answers["local_patterns_B"],
     df_answers["local_patterns_C"],
     alternative="less",
 )
-print(f"Local B vs C: {res.pvalue:.2f}")
+print(f"Local B vs C: {res.pvalue:.3f}")
 res = stats.wilcoxon(
     df_answers["global_pattern_B"],
     df_answers["global_pattern_C"],
     alternative="less",
 )
-print(f"Global B vs C: {res.pvalue:.2f}")
+print(f"Global B vs C: {res.pvalue:.3f}")
 res = stats.wilcoxon(
     df_answers["similarity_to_game_B"],
     df_answers["similarity_to_game_C"],
     alternative="less",
 )
-print(f"Similarity B vs C: {res.pvalue:.2f}")
+print(f"Similarity B vs C: {res.pvalue:.3f}")
