@@ -18,14 +18,13 @@ def rename_column(col: str, conditions: dict) -> str:
 
 
 name_conditions = {
-    "Very Difficult": "difficulty_in_guidance",
+    "easy to guide": "difficulty_in_guidance",
     "Local Patterns": "local_patterns",
     "Global Pattern": "global_pattern",
-    "part of Dragon Warrior": "similarity_to_game",
+    "Dragon Warrior": "similarity_to_game",
 }
 
 df = df.dropna(axis=1)
-df = df.drop([3], axis=0)
 new_columns = [rename_column(col, name_conditions) for col in df.columns]
 sufixes = ["A", "B", "C"]
 for i in range(len(sufixes)):
@@ -33,8 +32,11 @@ for i in range(len(sufixes)):
         new_columns[new_columns.index(name)] = name + "_" + sufixes[i]
 df.columns = new_columns
 # %%
+df
 
-df_answers = df.iloc[:, 3:]
+# %%
+
+df_answers = df.iloc[:, 8:]
 
 # %%
 fig, axes = plt.subplots(2, 2)
